@@ -19,5 +19,6 @@ class UserInfo extends Model
         'city',
         'state',
         'country',
+        'gender',
     ];
 }

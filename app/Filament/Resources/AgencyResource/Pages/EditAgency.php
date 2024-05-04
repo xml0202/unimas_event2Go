@@ -22,6 +22,6 @@ class EditAgency extends EditRecord
     }
     protected function getSavedNotificationTitle(): ?string
     {
-        return 'Role Updated';
+        return 'Agency Updated';
     }
 }

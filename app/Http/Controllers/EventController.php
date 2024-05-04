@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
@@ -22,12 +23,13 @@ class EventController extends Controller
     public function home(): View
     {
         // Latest event
-        $currentTime = now();
+        $currentTime = now()->setTimezone('Asia/Kuala_Lumpur');
+        $oneWeekBefore = Carbon::now()->setTimezone('Asia/Kuala_Lumpur')->subWeek();
+        $oneWeekAfter = Carbon::now()->setTimezone('Asia/Kuala_Lumpur')->addWeek();
 
         $latestEvent = Event::where('status', '=', 1)
-            ->where('register_start_time', '<', $currentTime)
-            ->where('register_end_time', '>', $currentTime)
-            ->orderBy('register_start_time', 'asc')
+            ->where('end_datetime', '>', $currentTime)
+            ->orderBy('start_datetime', 'asc')
             ->first();
 
         // Show the most popular 3 events based on upvotes
@@ -39,9 +41,8 @@ class EventController extends Controller
                     ->orWhere('upvote_downvotes.is_upvote', '=', 1);
             })
             ->where('status', '=', 1)
-            ->where('register_start_time', '<', $currentTime)
-            ->where('register_end_time', '>', $currentTime)
-            ->orderBy('register_start_time', 'asc')
+            ->where('end_datetime', '>', $currentTime)
+            ->orderBy('start_datetime', 'asc')
             ->groupBy([
                 'events.id',
                 'events.title',
@@ -62,8 +63,7 @@ class EventController extends Controller
                 ->where('upvote_downvotes.is_upvote', 1)
                 ->where('upvote_downvotes.user_id', $user->id)
                 ->where('status', '=', 1)
-                ->where('register_start_time', '<', $currentTime)
-                ->where('register_end_time', '>', $currentTime)
+                ->where('end_datetime', '>', $currentTime)
                 ->limit(3)
                 ->get();
 
@@ -73,8 +73,7 @@ class EventController extends Controller
                 ->leftJoin('event_views', 'events.id', '=', 'event_views.event_id')
                 ->select('events.*', DB::raw('COUNT(event_views.id) as view_count'))
                 ->where('status', '=', 1)
-                ->where('register_start_time', '<', $currentTime)
-                ->where('register_end_time', '>', $currentTime)
+                ->where('end_datetime', '>', $currentTime)
                 ->orderByDesc('view_count')
                 ->groupBy([
                     'events.id',
@@ -140,6 +139,10 @@ class EventController extends Controller
         //     throw new NotFoundHttpException();
         // }
         
+        $currentTime = now()->setTimezone('Asia/Kuala_Lumpur');
+        $oneWeekBefore = Carbon::now()->setTimezone('Asia/Kuala_Lumpur')->subWeek();
+        $oneWeekAfter = Carbon::now()->setTimezone('Asia/Kuala_Lumpur')->addWeek();
+        
         $attendee = null;
         if (auth()->check()) {
             
@@ -149,44 +152,47 @@ class EventController extends Controller
             ->limit(1)
             ->first();
             
+        $user = $request->user();
+        EventView::create([
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'event_id' => $event->id,
+            'user_id' => $user->id
+        ]);
+            
         } 
         
         
 
         $next = Event::query()
             ->where('status', true)
-            ->whereDate('register_start_time', '>=', Carbon::now())
-            ->whereDate('register_start_time', '<', $event->register_start_time)
-            ->orderBy('register_start_time', 'desc')
+            ->whereDate('start_datetime', '<=', $oneWeekAfter)
+            ->whereDate('start_datetime', '>', $event->start_datetime)
+            ->orderBy('start_datetime', 'desc')
             ->limit(1)
             ->first();
 
         $prev = Event::query()
             ->where('status', true)
-            ->whereDate('register_start_time', '>=', Carbon::now())
-            ->whereDate('register_start_time', '>', $event->register_start_time)
-            ->orderBy('register_start_time', 'asc')
+            ->whereDate('start_datetime', '<=', $oneWeekAfter)
+            ->whereDate('start_datetime', '<', $event->start_datetime)
+            ->orderBy('start_datetime', 'asc')
             ->limit(1)
             ->first();
 
-        $user = $request->user();
-        EventView::create([
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'event_id' => $event->id,
-            'user_id' => $user?->id
-        ]);
+        
 
         return view('event.view', compact('attendee', 'event', 'prev', 'next'));
     }
 
     public function byCategory(Category $category)
     {
+        $currentTime = now()->setTimezone('Asia/Kuala_Lumpur');
         $events = Event::query()
             ->where('category', '=', $category->category_name)
-            ->where('status', '=', true)
-            ->whereDate('register_start_time', '>=', Carbon::now())
-            ->orderBy('register_start_time', 'asc')
+            ->where('status', '=', 1)
+            ->where('end_datetime', '>=', now())
+            ->orderBy('start_datetime', 'asc')
             ->paginate(10);
 
         return view('event.index', compact('events', 'category'));
@@ -194,15 +200,16 @@ class EventController extends Controller
 
     public function search(Request $request)
     {
+        $currentTime = now()->setTimezone('Asia/Kuala_Lumpur');
         $q = $request->get('q');
 
         $events = Event::query()
             ->where('status', '=', true)
-            ->whereDate('register_start_time', '>=', Carbon::now())
-            ->orderBy('register_start_time', 'asc')
+            ->where('end_datetime', '>=', $currentTime)
+            ->orderBy('start_datetime', 'asc')
             ->where(function ($query) use ($q) {
                 $query->where('title', 'like', "%$q%")
-                    ->orWhere('description', 'like', "%$q%");
+                    ->orWhere('introduction', 'like', "%$q%");
             })
             ->paginate(10);
 
@@ -211,24 +218,40 @@ class EventController extends Controller
     
     public function joinEvent(Request $request)
     {
+        $price = $request->query('price');
+        
         $validatedData = $request->validate([
             'event_id' => 'required|string|max:255',
-            
         ]);
         
         $user = auth()->user();
+        
+        $existingAttendee = UserInfo::where('mobile_no', $request->input('mobile_no'))->whereNot('user_id', $user->id)->first();
+    
+        if ($existingAttendee) {
+            return response()->json(['message' => 'Mobile number is already in use.'], 422);
+        }
+        
+        
+        
+        $user->points()->create([
+            'action' => 'event_joined',
+            'points' => -$price,
+        ]);
+        
+        $user->updateTotalPoints();
         
         if (!$user->userInfo) {
         $userInfo = new UserInfo([
             'user_id' => $user->id,
             'mobile_no' => $request->input('mobile_no'),
-            'email' => $request->input('email'),
             'addr_line_1' => $request->input('addr_line_1'),
             'addr_line_2' => $request->input('addr_line_2'),
             'postcode' => $request->input('postcode'),
             'city' => $request->input('city'),
             'state' => $request->input('state'),
             'country' => $request->input('country'),
+            'gender' => $request->input('gender'),
         ]);
         $userInfo->save();
     }
@@ -238,7 +261,6 @@ class EventController extends Controller
         $attendee->event_id = $validatedData['event_id'];
         $attendee->required_transport = $request->input('required_transport');
         $attendee->qrcode = $request->input('qrcode');
-        $attendee->email = $request->input('email');
         $attendee->attended = $request->input('attended');
         $attendee->approved = $request->input('approved');
         $attendee->mobile_no = $request->input('mobile_no');
@@ -255,5 +277,29 @@ class EventController extends Controller
         $attendee->save();
 
         return redirect()->back()->with('success', 'You have successfully joined the event!');
+    }
+    
+    public function unjoinEvent(Request $request)
+    {
+        $validatedData = $request->validate([
+            'event_id' => 'required|string|max:255',
+        ]);
+    
+        $user = auth()->user();
+        
+        $price = $request->query('price');
+        
+        $user->points()->create([
+            'action' => 'event_joined',
+            'points' => $price,
+        ]);
+    
+        // Delete the user's attendance record for the specified event
+        $user->attendee()->where('event_id', $validatedData['event_id'])->delete();
+    
+        // Update the user's total points
+        $user->updateTotalPoints();
+    
+        return redirect()->back()->with('success', 'You have successfully unjoined the event!');
     }
 }

@@ -1,13 +1,13 @@
-<x-app-layout :meta-title="$event->meta_title ?: $event->title" :meta-description="$event->meta_description">
+<x-app-layout :meta-title="$event->meta_title ?: $event->title" :meta-description="$event->introduction">
     <div class="flex">
         <!-- Post Section -->
         <section class="w-full md:w-2/3 flex flex-col px-3">
 
             <article class="flex flex-col shadow my-4">
                 <!-- Article Image -->
-                <a href="#" class="hover:opacity-75">
+                <!--<a href="#" class="hover:opacity-75">-->
                     <img src="{{$event->getThumbnail()}}" class="w-full">
-                </a>
+                <!--</a>-->
                 <div class="bg-white flex flex-col justify-start p-6">
                     <!-- Category -->
                     <div class="text-gray-600 mb-2">
@@ -42,56 +42,70 @@
                         <span class="font-semibold">
                             <i class="far fa-calendar-alt mr-1"></i>
                             Event Date and Time: </span>
-                        {{$event->start_time}} | {{ $event->end_time }}
+                        {{$event->start_datetime}} | {{ $event->end_datetime }}
                     </p>
-                    <p class="text-sm mb-2">
-                        <span class="font-semibold">
-                            <i class="far fa-calendar-alt mr-1"></i>
-                            Register Date and Time:  </span>
-                        {{$event->register_start_time}} | {{ $event->register_end_time }}
-                    </p>
-                    <p class="text-sm text-gray-700 mb-2">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            {!! $event->extra_info !!}
-                        </p>
                     <!-- Max User -->
                     <p class="text-sm mb-4">
                         <span class="font-semibold">
                             <i class="fas fa-users mr-1"></i>
                             Max User:
                         </span>
-                        {{$event->maxUser}}
+                        {{$event->max_user}}
                     </p>
                     <!-- Description and Extra Info -->
                     <div class="mb-4">
                         <p class="text-sm text-gray-700 mb-2">
-                            {!! $event->description !!}
+                            {!! $event->introduction !!}
                         </p>
                         
                     </div>
                     <!-- Upvote and Downvote Component -->
-                    <livewire:upvote-downvote :event="$event"/>
+                    <div class="flex">
+                        <div class="mr-4">
+                            <livewire:upvote-downvote :event="$event"/>
+                        </div>
+                        <div>
+                            <livewire:bookmark :event="$event"/>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        
+                    </div>
                     <!-- Join Event Button -->
                     <div class="flex justify-end">
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(Request::url()) }}&amp;
+                        quote={{ urlencode($event->title) }}&amp;media={{ urlencode($event->getThumbnail()) }}" 
+                        target="_blank" 
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
+                        <i class="fab fa-facebook mr-2"></i> <!-- Font Awesome Facebook icon -->
+                        Share
+                    </a>
                         @auth
-                            @if(auth()->user()->hasRole('Super Admin'))
+                            @if(auth()->user()->hasRole('User'))
                                 @php
-                                    $registerStartDateTime = \Carbon\Carbon::parse($event->register_start_time);
-                                    $registerEndDateTime = \Carbon\Carbon::parse($event->register_end_time);
+                                    $registerStartDateTime = \Carbon\Carbon::parse($event->start_datetime);
+                                    $registerEndDateTime = \Carbon\Carbon::parse($event->end_datetime);
                                     $currentDateTime = now(); // Get the current date and time
                                     $userJoined = $event->attendees()->where('user_id', auth()->user()->id)->exists();
+                                    $userPoints = auth()->user()->total_points; // Assuming you have a method to get the user's total points
+                                    $eventPrice = $event->price; // Assuming you have a method to get the event's price
+                                    $userCanJoin = $userPoints >= $eventPrice;
                                 @endphp
-                                @if($currentDateTime >= $registerStartDateTime && $currentDateTime <= $registerEndDateTime)
+                                
                                     @if($userJoined)
-                                        <span class="bg-blue-300 text-gray-600 font-bold py-2 px-4 rounded border border-blue-500 cursor-not-allowed">
+                                        <a id="showModalBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                                             Joined
-                                        </span>
-                                    @else
+                                        </a>
+                                    @elseif($userCanJoin)
                                         <a id="joinBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                                             Join Event
                                         </a>
+                                    @else
+                                        <span class="bg-red-300 text-gray-600 font-bold py-2 px-4 rounded border border-red-500 cursor-not-allowed">
+                                            Not Enough Points
+                                        </span>
                                     @endif
-                                @endif
+                                
                             @endif
                         @endauth
                     </div>
@@ -138,7 +152,7 @@
             
             <h2 class="text-2xl font-bold mb-4">Join Event - {{ $event->title }}</h2>
             <!-- Your form fields here -->
-            <form action="{{ route('joinEvent') }}" method="POST" class="flex flex-col">
+            <form id="join-event-form" class="flex flex-col">
                 @csrf
                 <!-- Hidden input field for event_id -->
                 <input type="hidden" name="event_id" value="{{ $event->id }}">
@@ -148,18 +162,14 @@
                 <input type="hidden" name="approved" value=0>
                 <input type="hidden" name="status" value=1>
                 <select name="gender" id="gender" class="form-group flex flex-col md:flex-row" required>
-                    <option value="" disabled selected>Select Gender</option>
-                    <option value=1>Male</option>
-                    <option value=2>Female</option>
+                    <option value="" >Select Gender</option>
+                    <option value="1" {{ !is_null($attendee) && $attendee->gender == '1' ? 'selected' : '' }}>Male</option>
+                    <option value="2" {{ !is_null($attendee) && $attendee->gender == '2' ? 'selected' : '' }}>Female</option>
                 </select>
                 
                 <!-- Other form fields -->
                 <div class="form-group flex flex-col md:flex-row">
                     <input type="tel" name="mobile_no" id="contact_no" placeholder="Contact No" value="{{ $attendee->mobile_no ?? '' }}" required>
-                </div>
-            
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="email" name="email" id="email" placeholder="Email" value="{{ $attendee->email ?? '' }}" required>
                 </div>
             
                 <div class="form-group flex flex-col md:flex-row">
@@ -185,6 +195,8 @@
                 <div class="form-group flex flex-col md:flex-row">
                     <input type="text" name="country" id="country" placeholder="Country" value="{{ $attendee->country ?? '' }}" required>
                 </div>
+                
+                <div id="error-container" class="text-red-500"></div>
             
                 <div class="flex justify-between pt-4">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -197,6 +209,42 @@
             </form>
         </div>
     </div>
+    
+    <div id="modal2" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white p-8 rounded shadow-md">
+            <h2 class="text-2xl font-bold mb-4">Unjoin Event - {{ $event->title }}</h2>
+            <p>Are you sure you want to unjoin this event?</p>
+            <div class="flex justify-between pt-4">
+                <form id="unjoinForm" action="{{ route('unjoinEvent', ['price' => $event->price]) }}" method="POST">
+                    @csrf
+                    <!-- Hidden input field for event_id -->
+                    <input type="hidden" name="event_id" value="{{ $event->id }}">
+                    <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                        Confirm Unjoin
+                    </button>
+                </form>
+                <button id="cancelBtn2" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const showModalBtn = document.getElementById('showModalBtn');
+            const cancelBtn = document.getElementById('cancelBtn2');
+            const modal = document.getElementById('modal2');
+    
+            showModalBtn.addEventListener('click', function() {
+                modal.classList.remove('hidden');
+            });
+    
+            cancelBtn.addEventListener('click', function() {
+                modal.classList.add('hidden');
+            });
+        });
+    </script>
 
     <!-- JavaScript to handle modal visibility -->
     <script>
@@ -211,6 +259,58 @@
         cancelBtn.addEventListener('click', () => {
             modal.classList.add('hidden');
         });
+
     </script>
+    
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Handle form submission
+        $('#join-event-form').submit(function (event) {
+            event.preventDefault(); // Prevent the form from submitting normally
+
+            // Serialize form data
+            var formData = $(this).serialize();
+
+            // Submit form data via AJAX
+            $.ajax({
+                type: 'POST',
+                url: '{{ route("joinEvent", ["price" => $event->price]) }}',
+                data: formData,
+                headers: {
+                    'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
+                    'Accept': 'application/json'
+                },
+                success: function (response) {
+                    // Handle success, e.g., close modal or show success message
+                    // For example, you can redirect the user to another page
+                     window.location.reload();
+                },
+                error: function (response) {
+                    // Handle errors, e.g., display error messages
+                    var errorContainer = $('#error-container');
+                    errorContainer.empty(); // Clear previous error messages
+                
+                    if (response.status === 422) {
+                        var errors = response.responseJSON.errors;
+                        if (errors && errors.mobile_no) {
+                            errorContainer.append('<p class="text-red-500">' + errors.mobile_no[0] + '</p>');
+                        } else {
+                            errorContainer.append('<p class="text-red-500">Mobile number is already in use.</p>');
+                        }
+                    } else {
+                        errorContainer.append('<p>Something went wrong. Please try again later.</p>');
+                    }
+                }
+            });
+        });
+
+        // Handle cancel button click
+        $('#cancelBtn').click(function () {
+            // Close the modal
+            $('#modal').addClass('hidden');
+        });
+    });
+</script>
     
 </x-app-layout>

@@ -12,8 +12,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Radio;
 use App\Models\AgencyUser;
 use Illuminate\Support\Str;
+use Closure;
 
 class AgencyUsersRelationManager extends RelationManager
 {
@@ -34,10 +36,21 @@ class AgencyUsersRelationManager extends RelationManager
             ->schema([
                 Hidden::make('admin_id')->default($userId),
                 Hidden::make('status')->default(1),
+                // Radio::make('type')
+                //     ->label('Type')
+                //     ->options([
+                //         'existing' => 'Existing',
+                //         'new' => 'New',
+                //     ])->inline()->required()->reactive()->columnSpan(2),
                 Select::make('user_id')
                     ->label('Name')
-                ->options($userOptions)
-                ->searchable()
+                    ->options($userOptions)
+                    ->searchable()
+                    ->required()
+                    // ->visible(fn() => auth()->user()->hasRole('Super Admin')), 
+                    // ->visible(function (Closure $get): string {
+                    //     return $get('type') === 'existing';
+                    // }),
             ]);
     }
 

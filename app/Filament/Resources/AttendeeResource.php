@@ -21,6 +21,8 @@ class AttendeeResource extends Resource
     
     protected static ?int $navigationSort = 3;
     
+    protected static bool $shouldRegisterNavigation = false;
+    
     protected static ?string $navigationGroup = 'Content';
 
     public static function form(Form $form): Form
@@ -85,31 +87,14 @@ class AttendeeResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('event.title'),
                 Tables\Columns\TextColumn::make('user.name'),
-                // Tables\Columns\IconColumn::make('required_transport')
-                //     ->boolean(),
-                // Tables\Columns\TextColumn::make('qrcode'),
-                // Tables\Columns\IconColumn::make('attended')
-                //     ->boolean(),
-                // Tables\Columns\IconColumn::make('approved')
-                //     ->boolean(),
                 Tables\Columns\TextColumn::make('mobile_no'),
-                Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('user.email'),
                 // Tables\Columns\IconColumn::make('status')
                 //     ->boolean(),
                 Tables\Columns\TextColumn::make('gender')->enum([
                     '1' => 'Male',
                     '0' => 'Female',
                 ]),
-                Tables\Columns\TextColumn::make('addr_line_1'),
-                Tables\Columns\TextColumn::make('addr_line_2'),
-                Tables\Columns\TextColumn::make('postcode'),
-                Tables\Columns\TextColumn::make('city'),
-                Tables\Columns\TextColumn::make('state'),
-                Tables\Columns\TextColumn::make('country'),
-                // Tables\Columns\TextColumn::make('created_at')
-                //     ->dateTime(),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime(),
             ])
             ->filters([
                 //

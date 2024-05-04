@@ -10,34 +10,80 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OtpMail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Event; 
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $fields = $request->validate([
+        $messages = [
+            'name.required' => 'The name field is required.',
+            'email.required' => 'The email field is required.',
+            'email.unique' => 'The email has already been taken.',
+            'password.required' => 'The password field is required.',
+            'password.confirmed' => 'The password confirmation does not match.'
+        ];
+    
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string',
             'email' => 'required|string|unique:users,email',
             'password' => 'required|string|confirmed'
-        ]);
-
+        ], $messages);
+    
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+    
         // Generate a random 6-digit OTP
         $otp = mt_rand(100000, 999999);
-
+    
         // Create the user
         $user = User::create([
-            'name' =>  $fields['name'],
-            'email' => $fields['email'],
-            'password' => bcrypt($fields['password']),
+            'name' =>  $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
             'otp' => $otp,
             'otp_expiry' => now()->addMinutes(5) // OTP will expire in 5 minutes
         ]);
+    
+        $user->assignRole('User');
+    
+        // Send the OTP to the user's email address
+        Mail::to($user->email)->send(new OtpMail($otp));
+    
+        // Return response with token
+        return response()->json(['message' => 'User registered successfully. Please check your email for OTP verification.'], 201);
+    }
+    
+    public function resendOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|exists:users,email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        // Generate a new random 6-digit OTP
+        $otp = mt_rand(100000, 999999);
+
+        // Update the user's OTP and expiry time
+        $user->otp = $otp;
+        $user->otp_expiry = now()->addMinutes(5); // OTP will expire in 5 minutes
+        $user->save();
 
         // Send the OTP to the user's email address
         Mail::to($user->email)->send(new OtpMail($otp));
 
-        // Return response with token
-        return response()->json(['message' => 'User registered successfully. Please check your email for OTP verification.'], 201);
+        return response()->json(['message' => 'OTP resent successfully. Please check your email for OTP verification.']);
     }
     
     public function login(Request $request) {
@@ -49,15 +95,20 @@ class AuthController extends Controller
         $user = User::where('email', $fields['email'])->first();
         
         if (!$user || !Hash::check($fields['password'], $user->password)) {
+            Event::dispatch(new Failed('web', $user ? $user : null, ['email' => $fields['email']]));
             return response([
                 'message' => 'Bad Creds'    
             ], 401);
         }
         
+        Event::dispatch(new Login('web', $user, false));
+        
         $token = $user->createToken('myapptoken')->plainTextToken;
+        $roles = $user->roles()->pluck('name'); 
         
         $response = [
           'user' => $user,
+          'role' => $roles,
           'token' => $token
         ];
         
@@ -66,6 +117,10 @@ class AuthController extends Controller
     
     public function logout(Request $request) {
         auth()->user()->tokens()->delete();
+        
+        Event::dispatch(new Logout('web', auth()->user()));
+        
+        Auth::logout();
         
         return [
             'message' => 'Logged out'
@@ -94,11 +149,20 @@ class AuthController extends Controller
         $user->otp_expiry = null; // Clear OTP expiry
         $user->save();
 
+        $user->points()->create([
+            'action' => 'user_registration',
+            'points' => config('points.actions.user_registration'),
+        ]);
+        
+        
+        
+        $user->updateTotalPoints();
+
         // Generate token for the user
-        $token = $user->createToken('myapptoken')->plainTextToken;
+        // $token = $user->createToken('myapptoken')->plainTextToken;
 
         // Return response with token
-        return response()->json(['token' => $token, 'message' => 'Email verified successfully.'], 200);
+        return response()->json(['message' => 'Email verified successfully.'], 200);
     }
 
 }

@@ -17,7 +17,6 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('mobile_no', 20)->unique();
-            $table->string('email', 50)->unique();
             $table->string('addr_line_1', 255);
             $table->string('addr_line_2', 255)->nullable();
             $table->string('postcode', 255);

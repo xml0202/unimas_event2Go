@@ -9,11 +9,13 @@ use Filament\Resources\Pages\EditRecord;
 class EditEventAdmin extends EditRecord
 {
     protected static string $resource = EventAdminResource::class;
+    
+    protected static ?string $title = 'Event Approval';
 
     protected function getActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            // Actions\DeleteAction::make(),
         ];
     }
 }

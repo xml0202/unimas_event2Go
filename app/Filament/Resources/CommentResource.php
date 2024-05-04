@@ -27,14 +27,15 @@ class CommentResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Textarea::make('comment')
-                    ->required(),
-                Forms\Components\Select::make('post_id')
+                Forms\Components\Select::make('event_id')
                     ->relationship('event', 'title')
-                    ->required(),
-                Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->required(),
+                    ->required()->columnSpan(2),
+                Forms\Components\Textarea::make('comment')
+                    ->required()->columnSpan(2),
+                Forms\Components\Hidden::make('user_id')->default(auth()->id()),
+                // Forms\Components\Select::make('user_id')
+                //     ->relationship('user', 'name')
+                //     ->required(),
                 Forms\Components\TextInput::make('parent_id'),
             ]);
     }
@@ -43,8 +44,8 @@ class CommentResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('comment'),
                 Tables\Columns\TextColumn::make('event.title'),
+                Tables\Columns\TextColumn::make('comment'),
                 Tables\Columns\TextColumn::make('user.name'),
                 // Tables\Columns\TextColumn::make('created_at')
                 //     ->dateTime(),
@@ -82,6 +83,10 @@ class CommentResource extends Resource
     
     public static function getEloquentQuery(): Builder
     {
+        if (auth()->user()->hasRole('Super Admin')) {
+            return parent::getEloquentQuery();
+        }
+        
         return parent::getEloquentQuery()
         ->select('comments.id as comment_id', 'comments.*')
         ->join('events', 'comments.event_id', '=', 'events.id')

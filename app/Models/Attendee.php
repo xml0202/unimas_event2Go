@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class Attendee extends Model
+class Attendee extends Pivot
 {
     use HasFactory;
+    
+    protected $table = "attendees";
     
     protected $fillable = [
         'id', 
@@ -30,12 +33,14 @@ class Attendee extends Model
         'state', 
         'country'];
 
-    public function user(){
-    	return $this->hasOne(User::class, 'id', 'user_id');
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
-	public function event(){
-    	return $this->hasOne(Event::class, 'id', 'event_id');
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
 }

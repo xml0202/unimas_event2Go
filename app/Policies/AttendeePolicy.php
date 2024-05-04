@@ -18,7 +18,7 @@ class AttendeePolicy
      */
     public function viewAny(User $user)
     {
-        return $user->hasRole(['Admin', 'Agency']);
+        // return $user->hasRole(['Admin', 'Agency']);
     }
 
     /**

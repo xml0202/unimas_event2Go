@@ -56,6 +56,7 @@ class AgencyResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -64,8 +65,19 @@ class AgencyResource extends Resource
     
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $user = auth()->user();
+        
+        if ($user->hasRole('Super Admin')) {
+            // Super admins can see all data
+            return parent::getEloquentQuery();
+        }
+        else
+        {
+            return parent::getEloquentQuery()
             ->where('admin_id', auth()->id());
+        }
+        
+        
     }
     
     public static function getRelations(): array

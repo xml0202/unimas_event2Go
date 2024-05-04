@@ -8,7 +8,7 @@
             <a href="{{route('by-category', $category)}}"
                class="text-semibold block py-2 px-3 rounded {{ request('category')?->category_name === $category->category_name
                 ? 'bg-blue-600 text-white' :  ''}}">
-                {{$category->category_name}} ({{$category->total}})
+                {{$category->category_name}}
             </a>
         @endforeach
     </div>

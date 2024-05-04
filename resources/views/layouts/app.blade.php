@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event</title>
+    <title>{{ $metaTitle }}</title>
     <meta name="author" content="">
     <meta name="description" content="{{ $metaDescription }}">
+
 
     <style>
         @import url('https://fonts.googleapis.com/css?family=Karla:400,700&display=swap');
@@ -59,6 +60,7 @@
                        class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">{{ $category->category_name }}</a>
                 @endforeach
             @endauth
+            
         </div>
     </div>
 </div>
@@ -107,6 +109,9 @@
                                 
                                 @auth
                                     @if(Auth::user()->hasVerifiedEmail())
+                                        <x-dropdown-link :href="route('bookmarked-event')">
+                                            {{ __('Bookmarked') }}
+                                        </x-dropdown-link>
                                         <x-dropdown-link :href="route('profile.edit')">
                                             {{ __('Profile') }}
                                         </x-dropdown-link>
@@ -116,6 +121,8 @@
                                         {{ __('Profile') }}
                                     </x-dropdown-link>
                                 @endauth
+                                
+                                <!--<a href="{{route('bookmarked-event')}}" class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">Bookmarked</a>-->
 
                                 <!-- Authentication -->
                                 <form method="POST" action="{{ route('logout') }}">

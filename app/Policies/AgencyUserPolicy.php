@@ -54,7 +54,7 @@ class AgencyUserPolicy
      */
     public function update(User $user, AgencyUser $agencyUser)
     {
-        return $user->hasRole(['']);
+        // return $user->hasRole(['Admin']);
     }
 
     /**

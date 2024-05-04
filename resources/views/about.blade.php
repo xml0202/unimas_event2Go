@@ -1,25 +1,18 @@
-<x-app-layout meta-title="TheCodeholic Blog - About us">
-
+<x-app-layout >
     <div class="container mx-auto flex flex-wrap py-6">
 
-        <!-- Post Section -->
-        <section class="w-full md:w-full flex flex-col items-center px-3">
-
-            <article class="flex flex-col shadow my-4">
-                @if($widget && $widget->image)
-                    <img src="/storage/{{ $widget->image }}">
-                @endif
-
-                <div class="bg-white flex flex-col justify-start p-6">
-                    <h1 class="text-3xl font-bold hover:text-gray-700 pb-4">
-                        {{$widget ? $widget->title : ''}}
-                    </h1>
-                    <div>
-                        {!! $widget ? $widget->content : '' !!}
-                    </div>
-                </div>
-            </article>
+        <!-- Posts Section -->
+        <section class="w-full md:w-2/3  px-3">
+            <div class=" flex flex-col items-left">
+                @foreach($events as $event)
+                    <x-post-item :event="$event"/>
+                @endforeach
+            </div>
+            {{ $events->links() }}
         </section>
+
+        <!-- Sidebar Section -->
+        <x-sidebar />
 
     </div>
 </x-app-layout>

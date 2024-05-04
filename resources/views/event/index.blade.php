@@ -4,7 +4,7 @@
 
         <!-- Posts Section -->
         <section class="w-full md:w-2/3  px-3">
-            <div class=" flex flex-col items-center">
+            <div class=" flex flex-col items-left">
                 @foreach($events as $event)
                     <x-post-item :event="$event"/>
                 @endforeach

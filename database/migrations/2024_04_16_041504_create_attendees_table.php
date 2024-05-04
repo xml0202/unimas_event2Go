@@ -22,7 +22,6 @@ return new class extends Migration
             $table->tinyInteger('attended');
             $table->tinyInteger('approved');
             $table->string('mobile_no', 255);
-            $table->string('email', 255);
             $table->tinyInteger('status');
             $table->tinyInteger('gender');
             $table->string('addr_line_1', 255);

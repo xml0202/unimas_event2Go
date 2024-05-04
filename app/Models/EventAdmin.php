@@ -18,74 +18,27 @@ class EventAdmin extends Model
     
     protected $fillable = [
         'user_id',
+        'admin_id',
         'title',
         'attachment',
-        'description',
-        'extra_info',
-        'start_time',
-        'end_time',
-        'register_start_time',
-        'register_end_time',
+        'introduction',
+        'organized_by',
+        'in_collaboration',
+        'program_objective',
+        'program_impact',
+        'invitation',
+        'start_datetime',
+        'end_datetime',
         'category',
         'location',
-        'online',
-        'maxUser',
-        'paid',
+        'max_user',
         'price',
         'earn_points',
         'approved',
-        'listed',
+        'approval',
         'status',
+        'comment_enabled',
     ];
     
-    protected $casts = [
-        'register_start_time' => 'datetime'
-    ];
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function categories(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-    
-    public function attendees()
-    {
-        return $this->hasMany(Attendee::class, 'event_id')->with('user');
-    }
-
-    public function shortBody($words = 30): string
-    {
-        return Str::words(strip_tags($this->body), $words);
-    }
-
-    public function getFormattedDate()
-    {
-        return $this->register_start_time->format('F jS Y');
-    }
-
-    public function getThumbnail()
-    {
-        if (str_starts_with($this->attachment, 'http')) {
-            return $this->attachment;
-        }
-
-        return '/storage/' . $this->attachment;
-    }
-
-    public function humanReadTime(): Attribute
-    {
-        return new Attribute(
-            get: function ($value, $attributes) {
-                $words = Str::wordCount(strip_tags($attributes['description']));
-                $minutes = ceil($words / 200);
-
-                return $minutes . ' ' . str('min')->plural($minutes) . ', '
-                    . $words . ' ' . str('word')->plural($words);
-            }
-        );
-    }
 }

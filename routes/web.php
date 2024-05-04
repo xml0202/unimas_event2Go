@@ -33,9 +33,9 @@ require __DIR__.'/auth.php';
 
 Route::get('/', [EventController::class, 'home'])->name('home');
 Route::get('/search', [EventController::class, 'search'])->name('search');
-Route::get('/about-us', [SiteController::class, 'about'])->name('about-us');
+Route::get('/bookmarked-event', [SiteController::class, 'bookmarkedEvent'])->name('bookmarked-event');
 Route::get('/category/{category:category_name}', [EventController::class, 'byCategory'])->name('by-category');
-Route::get('/{event:title}', [EventController::class, 'show'])->name('view');
+Route::get('/{event:id}', [EventController::class, 'show'])->name('view');
 
 Route::post('/join-event', [EventController::class, 'joinEvent'])->name('joinEvent');
-
+Route::post('/unjoin-event', [EventController::class, 'unjoinEvent'])->name('unjoinEvent');

@@ -12,6 +12,15 @@ class CreateEvent extends CreateRecord
 {
     protected static string $resource = EventResource::class;
     
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+    protected function getCreatedNotificationTitle(): ?string
+    {
+        return 'Event Created';
+    }
+    
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $admin_id = DB::table('users')
@@ -21,7 +30,7 @@ class CreateEvent extends CreateRecord
                     ->first();
         
         $data['user_id'] = auth()->id();
-        $data['admin_id'] = $admin_id ? $admin_id->admin_id : null;
+        $data['admin_id'] = $admin_id ? $admin_id->admin_id : 1;
         return $data;
     }
 }

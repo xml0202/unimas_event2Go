@@ -18,7 +18,7 @@ class EventAdminPolicy
      */
     public function viewAny(User $user)
     {
-        return $user->hasRole(['Admin']);
+        // return $user->hasRole(['Admin']);
     }
 
     /**
@@ -53,7 +53,7 @@ class EventAdminPolicy
      */
     public function update(User $user, EventAdmin $eventAdmin)
     {
-        //
+        return $user->hasRole(['Admin']);
     }
 
     /**

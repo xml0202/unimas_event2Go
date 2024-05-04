@@ -19,30 +19,28 @@ return new class extends Migration
         $table->unsignedBigInteger('admin_id');
         $table->string('title');
         $table->string('attachment');
-        $table->text('description');
-        $table->text('extra_info')->nullable();
-        $table->dateTime('start_time');
-        $table->dateTime('end_time');
-        $table->dateTime('register_start_time');
-        $table->dateTime('register_end_time');
+        $table->text('introduction');
+        $table->text('organized_by');
+        $table->text('in_collaboration');
+        $table->text('program_objective');
+        $table->text('program_impact');
+        $table->text('invitation');
+        $table->dateTime('start_datetime');
+        $table->dateTime('end_datetime');
         $table->string('category');
-        $table->string('location')->nullable();
-        $table->string('url')->nullable();
-        $table->boolean('online')->default(false);
-        $table->unsignedInteger('maxUser');
-        $table->boolean('paid')->default(false);
+        $table->string('location');
+        $table->unsignedInteger('max_user');
         $table->integer('price')->nullable();
         $table->unsignedInteger('earn_points')->nullable();
         $table->boolean('approved')->default(false);
         $table->boolean('approval')->default(false);
-        $table->boolean('listed')->default(true);
         $table->unsignedInteger('status');
         $table->timestamps();
     
         // Indexes
         $table->index('user_id');
-        $table->index('start_time');
-        $table->index('end_time');
+        $table->index('start_datetime');
+        $table->index('end_datetime');
         // Add indexes to other columns as needed
     });
     }

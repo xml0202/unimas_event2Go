@@ -5,6 +5,7 @@ namespace App\Filament\Resources\EventResource\Widgets;
 use Filament\Widgets\Widget;
 use App\Models\EventView;
 use App\Models\UpvoteDownvote;
+use App\Models\Bookmark;
 use Illuminate\Database\Eloquent\Model;
 
 class EventOverview extends Widget
@@ -17,8 +18,8 @@ class EventOverview extends Widget
     {
         return [
             'viewCount' => EventView::where('event_id', '=', $this->record->id)->count(),
-            'upvotes' => UpvoteDownvote::where('event_id', '=', $this->record->id)->where('is_upvote', '=', 1)->count(),
-            'downvotes' => UpvoteDownvote::where('event_id', '=', $this->record->id)->where('is_upvote', '=', 0)->count(),
+            'like' => UpvoteDownvote::where('event_id', '=', $this->record->id)->where('is_upvote', '=', 1)->count(),
+            'bookmark' => Bookmark::where('event_id', '=', $this->record->id)->count(),
         ];
     }
     

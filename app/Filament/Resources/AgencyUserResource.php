@@ -18,6 +18,9 @@ use App\Models\User;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Radio;
+use Closure;
 
 class AgencyUserResource extends Resource
 {
@@ -25,7 +28,11 @@ class AgencyUserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-collection';
     
-    protected static bool $shouldRegisterNavigation = false;
+    // protected static bool $shouldRegisterNavigation = false;
+    
+    protected static ?string $navigationGroup = 'Settings';
+    
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {
@@ -35,28 +42,68 @@ class AgencyUserResource extends Resource
             return Str::contains(request()->url(), 'agency-users/create');
         };
         
-        $userOptions = $isCreateAgencyUser()
-    ? User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+    //     $userOptions = $isCreateAgencyUser()
+    // ? User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+    //     ->whereNotIn('id', AgencyUser::pluck('user_id'))
+    //     ->where('role_id', 3)
+    //     ->pluck('name', 'id')
+    // : User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+    //     ->where('role_id', 3)->pluck('users.name', 'users.id');
+    
+        if (auth()->user()->hasRole('Super Admin')) {
+            $agencyOptions = Agency::pluck('name', 'id');
+        }
+        else
+        {
+            $agencyOptions = Agency::where('admin_id', $userId)->pluck('name', 'id');
+        }
+        
+        $userOptions = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
         ->whereNotIn('id', AgencyUser::pluck('user_id'))
         ->where('role_id', 3)
-        ->pluck('name', 'id')
-    : User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
-        ->where('role_id', 3)->pluck('users.name', 'users.id');
+        ->pluck('name', 'id');
         
         return $form
             ->schema([
+                
                 Select::make('agency_id')
                     ->label('Agency')
-                ->options(Agency::where('admin_id', $userId)->pluck('name', 'id'))
-                ->searchable(),
+                ->options($agencyOptions)
+                ->searchable()->required()->columnSpan(2),
+                Radio::make('type')
+                    ->label('Type')
+                    ->options([
+                        'existing' => 'Existing',
+                        'new' => 'New',
+                    ])->inline()->required()->reactive()->columnSpan(2),
+                TextInput::make('name')
+                    ->label('Name')
+                    ->required()
+                    // ->visible(fn() => auth()->user()->hasRole('Super Admin')), 
+                    ->visible(function (Closure $get): string {
+                        return $get('type') === 'new';
+                    })->columnSpan(2),
                 Select::make('user_id')
-                    ->label('User')
+                    ->label('Name')
                 // ->options(User::all()->pluck('name', 'id'))
-                ->options($userOptions)
-                ->searchable(),
-                Forms\Components\Toggle::make('status'),
-                Forms\Components\Toggle::make('contact')
-                    ->required(),
+                    ->options($userOptions)
+                    ->visible(function (Closure $get): string {
+                        return $get('type') === 'existing';
+                    })
+                    ->searchable()
+                    ->required()->columnSpan(2),
+                Forms\Components\Hidden::make('status')->default('1'),
+                Forms\Components\Hidden::make('contact')->default('0'),
+                // Forms\Components\Toggle::make('status'),
+                // Forms\Components\Toggle::make('contact')
+                //     ->required(),
+                Forms\Components\TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->maxLength(191)
+                    ->visible(function (Closure $get): string {
+                        return $get('type') === 'new';
+                    })->columnSpan(2),
             ]);
     }
 
@@ -67,8 +114,8 @@ class AgencyUserResource extends Resource
                 Tables\Columns\TextColumn::make('agency.name'),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Name'),
-                Tables\Columns\IconColumn::make('contact')
-                    ->boolean(),
+                // Tables\Columns\IconColumn::make('contact')
+                    // ->boolean(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime(),
             ])
@@ -76,7 +123,9 @@ class AgencyUserResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                // Tables\Actions\EditAction::make(),
+                // Tables\Actions\ViewAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -85,9 +134,19 @@ class AgencyUserResource extends Resource
     
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->join('agencies', 'agency_users.agency_id', '=', 'agencies.id')
-            ->where('agencies.admin_id', auth()->id());
+        $user = auth()->user();
+        
+        if ($user->hasRole('Super Admin')) {
+            // Super admins can see all data
+            return parent::getEloquentQuery();
+        }
+        else
+        {
+            return parent::getEloquentQuery()
+            ->where('admin_id', auth()->id());
+        }
+        
+        
         
         // return parent::getEloquentQuery()->whereBelongsTo(auth()->user());
     }
