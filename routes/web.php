@@ -4,6 +4,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,6 +16,15 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+// Route::group(
+//     ["middleware" => ["guest"]],
+//     function () {
+//         Route::get("login", [AuthenticatedSessionController::class, "create"])->name('login');
+//         Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+//     }
+// );
+
 
 
 Route::get('/dashboard', function () {
@@ -31,6 +41,9 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
+Route::get('/welcome', [SiteController::class, 'index'])->name('welcome');
+Route::get("login_unimas", [AuthenticatedSessionController::class, "create_unimas"])->name('login_unimas');
+Route::post('login_unimas', [AuthenticatedSessionController::class, 'store_unimas'])->name('login_unimas.store');
 Route::get('/', [EventController::class, 'home'])->name('home');
 Route::get('/search', [EventController::class, 'search'])->name('search');
 Route::get('/bookmarked-event', [SiteController::class, 'bookmarkedEvent'])->name('bookmarked-event');
@@ -39,3 +52,8 @@ Route::get('/{event:id}', [EventController::class, 'show'])->name('view');
 
 Route::post('/join-event', [EventController::class, 'joinEvent'])->name('joinEvent');
 Route::post('/unjoin-event', [EventController::class, 'unjoinEvent'])->name('unjoinEvent');
+Route::get('/generate-qr/{eventId}', [EventController::class, 'generateQRCode'])->name('generate-qr');
+
+
+// Route::get("login", [AuthenticatedSessionController::class, "create"])->name('login');
+// Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');

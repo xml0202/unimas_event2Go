@@ -138,9 +138,9 @@
                         </x-dropdown>
                     </div>
                 @else
-                    <a href="{{route('login')}}"
+                    <a href="{{route('login_unimas')}}"
                        class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">Login</a>
-                    <a href="{{route('register')}}" class="bg-blue-600 text-white rounded py-2 px-4 mx-2">Register</a>
+                    <!--<a href="{{route('register')}}" class="bg-blue-600 text-white rounded py-2 px-4 mx-2">Register</a>-->
                 @endauth
             </div>
 </nav>

@@ -22,9 +22,11 @@ use Filament\Forms\Components\Select;
 use Awcodes\FilamentTableRepeater\Components\TableRepeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\DateTimePicker;
 use HusamTariq\FilamentTimePicker\Forms\Components\TimePickerField;
+use Filament\Tables\Actions\Action;
 
 class EventResource extends Resource
 {
@@ -69,6 +71,7 @@ class EventResource extends Resource
                     ->label('Location')
                     ->columnSpan(2)
                     ->required(),
+                Forms\Components\Checkbox::make('comment_enabled')->default(true),
                 // Forms\Components\Toggle::make('approval')->label('Approval')
                 //     ->reactive()
                 //     ->afterStateUpdated(function ($state, callable $set) {
@@ -122,6 +125,11 @@ class EventResource extends Resource
                     ->options(Category::all()->pluck('category_name', 'category_name'))
             ])
             ->actions([
+                Action::make('ok')
+                    ->url(fn (Event $record): string => route('generate-qr', $record))
+                    ->openUrlInNewTab()
+                    ->icon('heroicon-o-qrcode')
+                    ->label(''),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

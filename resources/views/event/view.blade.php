@@ -139,8 +139,12 @@
                     @endif
                 </div>
             </div>
-
-            <livewire:comments :event="$event"/>
+            @php
+                $comment_enabled = $event->comment_enabled;
+            @endphp
+            @if($comment_enabled == 1)
+                <livewire:comments :event="$event"/>
+            @endif
         </section>
 
         

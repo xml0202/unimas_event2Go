@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use App\Models\User;
 
 class SiteController extends Controller
 {
@@ -22,5 +25,16 @@ class SiteController extends Controller
             ->paginate(10);
 
         return view('about', compact('events'));
+    }
+    
+    public function index()
+    {
+        $user = json_encode(Session::get('user'));
+        // dd($user);
+        $access_token = Session::get('api_access_token');
+        $introspect = json_encode(Session::get('introspect'));
+
+
+        return view('welcome', compact('user', 'access_token', 'introspect'));
     }
 }

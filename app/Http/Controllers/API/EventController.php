@@ -82,7 +82,7 @@ class EventController extends Controller
         $validatedData['attachment'] = $attachments;
         $adminId = AgencyUser::where('user_id', $validatedData['user_id'])->value('admin_id');
         $validatedData['admin_id'] = $adminId;
-        $validatedData['status'] = $request->approved ? 2 : 1;
+        $validatedData['status'] = $request->approval ? 2 : 1;
     
         // Create the event with the validated data
         $event = Event::create($validatedData);

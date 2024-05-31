@@ -15,6 +15,7 @@ use App\Http\Controllers\API\LikeController;
 use App\Http\Controllers\API\NewsController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\UserInfoController;
+use App\Http\Controllers\ExternalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,18 +32,25 @@ use App\Http\Controllers\API\UserInfoController;
 //     return $request->user();
 // });
 
+Route::post('postdata', [ExternalController::class, 'postRequest']);
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('resend-otp', [AuthController::class, 'resendOtp']);
 
-Route::group(["middleware" => ['auth:sanctum', 'verified']], function (){
-    Route::post('logout', [AuthController::class, 'logout']);
+// Route::group(["middleware" => ['auth:sanctum', 'verified']], function (){
+//     Route::post('logout', [AuthController::class, 'logout']);
     
+//     Route::get('events', [EventController::class, 'index']);
+    
+//     Route::get('/event/{eventId}/officers', [EventController::class, 'getEventOfficers']);
+//     Route::get('/event/{eventId}/vips', [EventController::class, 'getEventVIPs']);
+// });
+
+Route::middleware('auth:api')->group(function () {
     Route::get('events', [EventController::class, 'index']);
-    
-    Route::get('/event/{eventId}/officers', [EventController::class, 'getEventOfficers']);
-    Route::get('/event/{eventId}/vips', [EventController::class, 'getEventVIPs']);
+
+    // Add other protected routes here...
 });
 
 // Route::get('events', [EventController::class, 'index']);

@@ -8,7 +8,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
+use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Rappasoft\LaravelAuthenticationLog\Traits\AuthenticationLoggable;
 use Illuminate\Support\Facades\Log;
@@ -24,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
         'email_verified_at',
@@ -49,7 +50,13 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        // 'password' => 'hashed',
     ];
+    
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
     
     public function userInfo()
     {

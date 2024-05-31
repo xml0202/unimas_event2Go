@@ -34,6 +34,7 @@ return new class extends Migration
         $table->unsignedInteger('earn_points')->nullable();
         $table->boolean('approved')->default(false);
         $table->boolean('approval')->default(false);
+        $table->boolean('comment_enabled');
         $table->unsignedInteger('status');
         $table->timestamps();
     

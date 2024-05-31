@@ -14,6 +14,7 @@ use Illuminate\View\View;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class EventController extends Controller
 {
@@ -301,5 +302,34 @@ class EventController extends Controller
         $user->updateTotalPoints();
     
         return redirect()->back()->with('success', 'You have successfully unjoined the event!');
+    }
+    
+    public function generateQRCode($eventId)
+    {
+        $event = Event::find($eventId);
+
+        // Set expiration time for the QR code (e.g., 5 minutes)
+        $expirationTime = now()->addMinutes(5);
+
+        // Generate a unique identifier based on event details and expiration time
+        $data = $event->id . "_" . $expirationTime->timestamp;
+        
+        if ($event) {
+            
+            $event->event_qr = $data;
+      
+            $event->save();
+
+        } else {
+            // Handle case where event does not exist
+        }
+
+        // Generate QR code image
+        $qrCode = QrCode::size(200)->generate($data);
+
+        // Store the event ID and expiration time in the session for validation
+        session(['qr_code_event_id' => $eventId, 'qr_code_expiration' => $expirationTime]);
+
+        return view('event.qr_code', compact('qrCode', 'event'));
     }
 }
