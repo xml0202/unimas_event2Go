@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Passport\Passport;
 use Laravel\Passport\Token;
 use App\Http\Controllers\ExternalController;
+use App\Http\HttpClient;
 
 class AuthController extends Controller
 {
@@ -285,6 +286,132 @@ class AuthController extends Controller
 
         // Return response with token
         return response()->json(['message' => 'Email verified successfully.'], 200);
+    }
+    
+    public function login_unimas(Request $request)
+    {
+
+        // Validation
+        $request->validate([
+            // "email" => "required|string|email",
+            "username" => "required",
+            "password" => "required"
+        ]);
+
+        // Check user by "email" value
+        // $user = User::where("email", $request->email)->first();
+
+        $externalController = new ExternalController;
+        $http_response    = $externalController->postRequest($request);
+        $response         = json_decode($http_response->getContent());
+        // dd($response);
+        if (isset($response->active) && isset($response->access_token)) {
+            $user_profile = HttpClient::base_client($response->access_token);
+            $user_profile = json_decode($user_profile, true);
+
+            $user = [
+                'name'              => $user_profile['name'],
+                'email'             => $user_profile['email'],
+                'password'          => bcrypt($request->password),
+                'email_verified_at' => date('Y-m-d H:i:s'),
+                'username'          => $user_profile['username'],
+            ];
+
+            $auth_user = User::firstOrCreate(['username' => $user['username']], $user);
+            $user_profile['user_id'] = $auth_user->id;
+
+            $profile = $auth_user->profile()->firstOrCreate(['user_id' => $auth_user->id], $user_profile);
+            // $request->authenticate();
+            $token = $auth_user->createToken("myToken")->accessToken;
+            return response()->json([
+                "status" => true,
+                "message" => "User logged in successfully",
+                "token" => $token
+            ]);
+        } else {
+            if ($response->errors == 419) {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Password didn't match"
+                ]);
+            } else {
+                return response()->json([
+                    "status" => false,
+                    "message" => "Invalid credentials"
+                ]);
+            }
+        }
+
+        // Check user by "password" value
+
+        // if (!empty($user)) {
+
+        //     if (Hash::check($request->password, $user->password)) {
+
+        //         // Auth Token value
+        //         $token = $user->createToken("myToken")->accessToken;
+
+        //         return response()->json([
+        //             "status" => true,
+        //             "message" => "User logged in successfully",
+        //             "token" => $token
+        //         ]);
+        //     } else {
+
+        //         return response()->json([
+        //             "status" => false,
+        //             "message" => "Password didn't match"
+        //         ]);
+        //     }
+        // } else {
+
+        //     return response()->json([
+        //         "status" => false,
+        //         "message" => "Invalid credentials"
+        //     ]);
+        // }
+    }
+    
+    public function profile()
+    {
+
+        $user = auth()->user();
+        $profile = $user->profile;
+
+        return response()->json([
+            "status" => true,
+            "message" => "User profile data",
+            "user" => $user,
+            "id" => auth()->user()->id,
+            "profile" => $profile,
+        ]);
+    }
+    
+    public function refreshToken()
+    {
+
+        $user = request()->user(); //user data
+        $token = $user->createToken("newToken");
+
+        $refreshToken = $token->accessToken;
+
+        return response()->json([
+            "status" => true,
+            "message" => "Refresh token",
+            "token" => $refreshToken
+        ]);
+    }
+    
+    public function logout_unimas()
+    {
+
+        request()->user()->tokens()->delete();
+
+
+        return response()->json([
+            "status" => true,
+            "message" => "User logged out"
+        ]);
     }
 
 }

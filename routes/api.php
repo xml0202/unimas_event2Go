@@ -37,6 +37,12 @@ Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+Route::get("profile", [AuthController::class, "profile"]);
+Route::get("refresh-token", [AuthController::class, "refreshToken"]);
+Route::get("logout_unimas", [AuthController::class, "logout_unimas"]);
+Route::post("login_unimas", [AuthController::class, "login_unimas"]);
+
+Route::post('postdata', [ExternalController::class, 'postRequest']);
 
 // Route::group(["middleware" => ['auth:sanctum', 'verified']], function (){
 //     Route::post('logout', [AuthController::class, 'logout']);
@@ -131,3 +137,5 @@ Route::post('user_infos', [UserInfoController::class, 'store']);
 Route::put('user_infos/{user_info}', [UserInfoController::class, 'update']);
 Route::get('user_infos/{user_info}', [UserInfoController::class, 'show']);
 Route::delete('user_infos/{user_info}', [UserInfoController::class, 'destroy']);
+
+
