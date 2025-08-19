@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Models\News;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class NewsController extends Controller
 {
@@ -35,7 +37,22 @@ class NewsController extends Controller
             'link' => 'nullable',
             // Add more validation rules as needed
         ]);
-
+        
+        $attachments = [];
+        foreach ($validatedData['link'] as $attachmentData) {
+            // Decode the base64-encoded attachment data
+            $fileContent = base64_decode($attachmentData);
+        
+            // Generate a random filename with a file extension
+            $fileName = Str::random(20) . '.jpg'; // For example, you can assume it's a JPEG file
+        
+            // Store the attachment file in the filesystem
+            Storage::disk('public')->put($fileName, $fileContent);
+        
+            // Add the filename to the list of attachments
+            $attachments[] = $fileName;
+        }
+        $validatedData['link'] = $attachments;
         $news = News::create($validatedData);
         return response()->json(['data' => $news, 'message' => 'News created successfully'], Response::HTTP_CREATED);
     }
@@ -49,6 +66,16 @@ class NewsController extends Controller
     public function show($id)
     {
         $news = News::find($id);
+        if (!$news) {
+            return response()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json(['data' => $news], Response::HTTP_OK);
+    }
+    
+    public function getEventNews($event_id)
+    {
+        $news = News::where('event_id', $event_id)->get();
         if (!$news) {
             return response()->json(['message' => 'News not found'], Response::HTTP_NOT_FOUND);
         }

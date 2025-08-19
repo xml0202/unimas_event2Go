@@ -12,6 +12,7 @@ use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Rappasoft\LaravelAuthenticationLog\Traits\AuthenticationLoggable;
 use Illuminate\Support\Facades\Log;
+use DateTimeInterface;
 
 class User extends Authenticatable implements MustVerifyEmail, FilamentUser
 {
@@ -30,7 +31,9 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         'email_verified_at',
         'otp',
         'otp_expiry',
-        'total_points'
+        'total_points',
+        'token',
+        'fcm_token',
     ];
 
     /**
@@ -55,7 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     
     public function profile()
     {
-        return $this->hasOne(Profile::class);
+        return $this->hasOne(Profile::class, 'user_id');
     }
     
     public function userInfo()
@@ -135,6 +138,11 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     public function adminEvents()
     {
         return $this->hasMany(Event::class, 'admin_id');
+    }
+    
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
     }
     
     // protected static function booted()

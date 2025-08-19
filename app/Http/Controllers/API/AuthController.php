@@ -295,12 +295,12 @@ class AuthController extends Controller
         $request->validate([
             // "email" => "required|string|email",
             "username" => "required",
-            "password" => "required"
+            // "password" => "required"
         ]);
+
 
         // Check user by "email" value
         // $user = User::where("email", $request->email)->first();
-
         $externalController = new ExternalController;
         $http_response    = $externalController->postRequest($request);
         $response         = json_decode($http_response->getContent());
@@ -321,10 +321,22 @@ class AuthController extends Controller
             $user_profile['user_id'] = $auth_user->id;
 
             $profile = $auth_user->profile()->firstOrCreate(['user_id' => $auth_user->id], $user_profile);
+            // if ($profile->category == "STAFF")
+            // {
+            //     $auth_user->assignRole('Agency');
+            // }
+            // else
+            // {
+            //     $auth_user->assignRole('User');
+            // }
+            $auth_user->assignRole('User');
             // $request->authenticate();
+            $roles = $auth_user->roles()->pluck('name');
             $token = $auth_user->createToken("myToken")->accessToken;
             return response()->json([
                 "status" => true,
+                'user' => $auth_user,
+                'role' => $roles,
                 "message" => "User logged in successfully",
                 "token" => $token
             ]);

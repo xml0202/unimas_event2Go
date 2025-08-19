@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
+use DateTimeInterface;
 
 class Event extends Model
 {
@@ -18,6 +19,8 @@ class Event extends Model
         'admin_id',
         'title',
         'attachment',
+        'url',
+        'pdf_files',
         'introduction',
         'organized_by',
         'in_collaboration',
@@ -35,12 +38,38 @@ class Event extends Model
         'approval',
         'status',
         'comment_enabled',
+        'points_awarded_at',
+        'report',
+        'report_created_at', 
+        'report_updated_at',
+        'registration_start_datetime',       
+        'registration_close_datetime',
+        'latitude',
+        'longitude',
+        'pic_name',
+        'pic_email',    
+        'pic_contact'
     ];
     
     protected $casts = [
         'attachment' => 'array',
+        'pdf_files' => 'array',
+        'report_created_at' => 'datetime',
+        'report_updated_at' => 'datetime'
     ];
     
+    
+    public function officers()
+    {
+        return $this->belongsToMany(User::class, 'officers')
+                    ->withPivot('status')
+                    ->withTimestamps();
+    }
+    
+    public function views()
+    {
+        return $this->hasMany(EventView::class);
+    }
     
     // protected $casts = [
     //     'start_time' => 'datetime',
@@ -162,5 +191,41 @@ class Event extends Model
                     . $words . ' ' . str('word')->plural($words);
             }
         );
+    }
+    
+    public function userLike($userId)
+    {
+        return $this->hasOne(UpvoteDownvote::class)->where('user_id', $userId);
+    }
+    
+    public function userBookmark($userId)
+    {
+        return $this->hasOne(Bookmark::class)->where('user_id', $userId);
+    }
+    
+    public function userAttendee($userId)
+    {
+        return $this->hasOne(Attendee::class)->where('user_id', $userId);
+    }
+    
+    public function teamAttendees()
+    {
+        return $this->hasMany(TeamAttendee::class, 'event_id');
+    }
+    
+    public function teams()
+    {
+        return $this->hasMany(TeamAttendee::class);
+    }
+
+    
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+    
+    public function getPdfUrlsAttribute()
+    {
+        return collect($this->pdf_files)->map(fn($path) => Storage::url($path))->toArray();
     }
 }

@@ -3,15 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class Attendee extends Pivot
 {
     use HasFactory;
-    
+
     protected $table = "attendees";
-    
+
     protected $fillable = [
         'id', 
         'user_id', 
@@ -23,6 +22,7 @@ class Attendee extends Pivot
         'attended', 
         'mobile_no', 
         'dob', 
+        'email',
         'status', 
         'gender', 
         'addr_line_1', 
@@ -31,11 +31,13 @@ class Attendee extends Pivot
         'city', 
         'state_id', 
         'state', 
-        'country'];
+        'country',
+        'type'
+    ];
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function event()
@@ -43,4 +45,9 @@ class Attendee extends Pivot
         return $this->belongsTo(Event::class);
     }
 
+    public function eventDays()
+    {
+        return $this->hasMany(AttendeeEventDay::class, 'attendee_id');
+    }
 }
+

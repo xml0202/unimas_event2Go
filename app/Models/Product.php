@@ -7,5 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    use HasFactory;
+	use HasFactory;
+
+	protected $fillable = [
+		'name',
+		'description',
+		'price',
+		'type'
+	];
+
+	public function invoiceItems()
+	{
+		return $this->hasMany(InvoiceItem::class);
+	}
 }

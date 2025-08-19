@@ -28,6 +28,7 @@ use Filament\Forms\Components\DateTimePicker;
 use HusamTariq\FilamentTimePicker\Forms\Components\TimePickerField;
 use Filament\Tables\Actions\Action;
 
+
 class EventResource extends Resource
 {
     protected static ?string $model = Event::class;
@@ -55,6 +56,8 @@ class EventResource extends Resource
                 Forms\Components\TextInput::make('program_objective')->label('Program Objective')->required()->columnSpan(2),
                 Forms\Components\TextInput::make('program_impact')->label('Program Impact')->required()->columnSpan(2),
                 Forms\Components\TextInput::make('invitation')->label('Invitation')->required()->columnSpan(2),
+                Forms\Components\DateTimePicker::make('registration_start_datetime')->label('Registration Start Date')->columnSpan(1)->required(),
+                Forms\Components\DateTimePicker::make('registration_close_datetime')->label('Registration Close Date')->columnSpan(1)->required(),
                 Forms\Components\DateTimePicker::make('start_datetime')->label('Start Date')->columnSpan(1)->required(),
                 Forms\Components\DateTimePicker::make('end_datetime')->label('End Date')->columnSpan(1)->required(),
                 Forms\Components\TextInput::make('price')
@@ -71,6 +74,13 @@ class EventResource extends Resource
                     ->label('Location')
                     ->columnSpan(2)
                     ->required(),
+                FileUpload::make('pdf_files')
+                    ->label('Attach PDFs')
+                    ->multiple() // Allow multiple PDFs
+                    ->directory('events')
+                    ->preserveFilenames()
+                    ->acceptedFileTypes(['application/pdf'])
+                    ->enableOpen(),
                 Forms\Components\Checkbox::make('comment_enabled')->default(true),
                 // Forms\Components\Toggle::make('approval')->label('Approval')
                 //     ->reactive()
@@ -125,6 +135,10 @@ class EventResource extends Resource
                     ->options(Category::all()->pluck('category_name', 'category_name'))
             ])
             ->actions([
+                Action::make('report')
+                ->label('Report')
+                ->icon('heroicon-o-document-text')
+                ->url(fn ($record) => route('events.report', $record)),
                 Action::make('ok')
                     ->url(fn (Event $record): string => route('generate-qr', $record))
                     ->openUrlInNewTab()

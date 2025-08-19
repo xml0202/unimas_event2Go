@@ -5,7 +5,10 @@ use App\Http\Controllers\SiteController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
-
+use App\Filament\Pages\EventReportPage;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\Event;
+use Illuminate\Support\Facades\Auth;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -54,6 +57,20 @@ Route::post('/join-event', [EventController::class, 'joinEvent'])->name('joinEve
 Route::post('/unjoin-event', [EventController::class, 'unjoinEvent'])->name('unjoinEvent');
 Route::get('/generate-qr/{eventId}', [EventController::class, 'generateQRCode'])->name('generate-qr');
 
+
+Route::get('/event_feedback/{event_id}/{user_id}', [EventController::class, 'getEventFeedback']);
+Route::get('/event_feedback_2/{event_id}/{user_id}', [EventController::class, 'getEventFeedback2']);
+Route::post('/event_feedback', [EventController::class, 'feedbackStore'])->name('feedback.save');
+Route::post('/event_feedback_2', [EventController::class, 'feedback2Store'])->name('feedback2.save');
+
+Route::get('/admin/events/{event}/report', EventReportPage::class)
+    ->name('events.report');  
+    
+Route::get('/events/{event}/report/pdf', function (Event $event) {
+    $pdf = Pdf::loadView('pdf.event-report', compact('event'));
+
+    return $pdf->download("report-{$event->title}.pdf");
+})->name('events.report.pdf');
 
 // Route::get("login", [AuthenticatedSessionController::class, "create"])->name('login');
 // Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');

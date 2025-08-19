@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\Attendee;
 use App\Models\UserInfo;
 use App\Models\EventView;
+use App\Models\FeedbackAns;
+use App\Models\Feedback2Ans;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 
 class EventController extends Controller
 {
@@ -47,9 +50,38 @@ class EventController extends Controller
             ->groupBy([
                 'events.id',
                 'events.title',
+                'events.admin_id',
+                'events.attachment',
+                'events.introduction',
+                'events.organized_by',
+                'events.in_collaboration',
+                'events.program_objective',
+                'events.program_impact',
+                'events.invitation',
+                'events.start_datetime',
+                'events.end_datetime',
+                'events.category',
+                'events.location',
+                'events.max_user',
+                'events.price',
+                'events.earn_points',
+                'events.comment_enabled',
+                'events.event_qr',
+                'events.approved',
+                'events.approval',
+                'events.status',
+                'events.Avgrating',
                 'events.user_id',
                 'events.created_at',
                 'events.updated_at',
+                'events.url',
+                'events.pdf_files',
+                'events.points_awarded_at',
+                'events.report',
+                'events.report_created_at',
+                'events.report_updated_at',
+                'events.registration_start_datetime',
+                'events.registration_close_datetime'
             ])
             ->limit(5)
             ->get();
@@ -95,6 +127,8 @@ class EventController extends Controller
             ->groupBy([
                 'categories.id',
                 'categories.category_name',
+                'categories.status',
+                'categories.listed',
                 'categories.created_at',
                 'categories.updated_at',
             ])
@@ -332,4 +366,126 @@ class EventController extends Controller
 
         return view('event.qr_code', compact('qrCode', 'event'));
     }
+    
+    public function feedbackStore(Request $request) {
+
+        $ans = new FeedbackAns();
+        $ans->user_id = $request->input('user_id');
+        $ans->event_id = $request->input('event_id');
+        $ans->q1ans1 = $request->input('Memenuhi');
+        $ans->q1ans2 = $request->input('Kesesuaian');
+        $ans->q1ans3 = $request->input('diperuntukkan');
+        $ans->q1ans4 = $request->input('modul');
+        $ans->q2ans1 = $request->input('Pengetahuan');
+        $ans->q2ans2 = $request->input('Pembentangan');
+        $ans->q2ans3 = $request->input('masa');
+        $ans->q2ans4 = $request->input('Interaksi');
+        $ans->q2ans5 = $request->input('Persediaan');
+        $ans->q3ans1 = $request->input('Pengurusan');
+        $ans->q4ans1 = $request->input('masyarakat');
+        $ans->q4ans2 = $request->input('manfaat');
+        $ans->q4ans3 = $request->input('mencadangkan');
+        $ans->q5ans1 = $request->input('Text1');
+        $ans->q6ans1 = $request->input('Text2');
+        
+       // $rating = ($ans->q1ans1 + $ans->q1ans2 + $ans->q1ans3 + $ans->q1ans4 + $ans->q2ans1 + $ans->q2ans2 + $ans->q2ans3 + $ans->q2ans4 + $ans->q2ans5 + ans->q3ans1 + $ans->q4ans1 + $ans->q4ans2 + $ans->q4ans3 ) / 15; 
+        
+        $rating = ($request->input('Memenuhi') + $request->input('Kesesuaian') + $request->input('diperuntukkan') + $request->input('modul') + $request->input('Pengetahuan') +  $request->input('Pembentangan') + $request->input('masa') + $request->input('Interaksi') + $request->input('Persediaan') + $request->input('Pengurusan') + $request->input('masyarakat') + $request->input('manfaat') + $request->input('mencadangkan')) / 13;
+        
+        $ans->rating = $rating;
+        
+        $ans->save();
+        
+        
+        $event_id = $request->input('event_id');
+        
+        $event = Event::find($event_id);
+        
+        $test = DB::table('feedback_ans')->where('event_id', $event_id)->avg('rating');
+        
+        $test1 = DB::table('feedback2_ans')->where('event_id', $event_id)->avg('rating');
+        
+        $total = ($test +  $test1) / 2;
+        
+        $event->Avgrating = round($total, 2);
+        
+        $event->update();
+
+    	return 'Submit Successfully';
+    }
+    
+    public function feedback2Store(Request $request) {
+
+        $ans = new Feedback2Ans();
+        $ans->user_id = $request->input('user_id');
+        $ans->event_id = $request->input('event_id');
+        $ans->q1ans1 = $request->input('Memenuhi');
+        $ans->q1ans2 = $request->input('kepuasan');
+        $ans->q1ans3 = $request->input('mesra');
+        $ans->q1ans4 = $request->input('urusan');
+        $ans->q1ans5 = $request->input('dibaiki');
+        $ans->q1ans6 = $request->input('manfaat');
+        $ans->q2ans1 = $request->input('Pengetahuan');
+        $ans->q2ans2 = $request->input('Pembentangan');
+        $ans->q2ans3 = $request->input('masa');
+        $ans->q3ans1 = $request->input('Text1');
+        $ans->q4ans1 = $request->input('Text2');
+        
+       // $rating = ($ans->q1ans1 + $ans->q1ans2 + $ans->q1ans3 + $ans->q1ans4 + $ans->q2ans1 + $ans->q2ans2 + $ans->q2ans3 + $ans->q2ans4 + $ans->q2ans5 + ans->q3ans1 + $ans->q4ans1 + $ans->q4ans2 + $ans->q4ans3 ) / 15; 
+        
+        $rating = ($request->input('Memenuhi') + $request->input('kepuasan') +  $request->input('mesra') + $request->input('urusan') + $request->input('dibaiki') + $request->input('manfaat') + $request->input('Pengetahuan') + $request->input('Pembentangan') + $request->input('masa')) / 9;
+        
+        $ans->rating = $rating;
+        
+        $ans->save();
+        
+        $event_id = $request->input('event_id');
+        
+        $event = Event::find($event_id);
+        
+        $test = DB::table('feedback_ans')->where('event_id', $event_id)->avg('rating');
+        
+        $test1 = DB::table('feedback2_ans')->where('event_id', $event_id)->avg('rating');
+        
+        $total = ($test +  $test1) / 2;
+        
+        $event->Avgrating = round($total, 2);
+        
+        $event->update();
+
+    	return 'Submit Successfully';
+    }
+    
+    public function getEventFeedback(Request $request, $event_id, $user_id) {
+        $newResponder = FeedbackAns::where('user_id', $user_id)->where('event_id', $event_id)->exists();
+        
+        $feedback_ans = FeedbackAns::where('user_id', $user_id)->where('event_id', $event_id)->get();
+        
+        if ($newResponder)
+        {
+            //return 1;
+           return view('api.feedback.feedback_ans', compact('feedback_ans'))->with('user_id',$user_id)->with('event_id', $event_id);
+        }
+        
+        return view('api.feedback.feedback')->with('user_id',$user_id)->with('event_id', $event_id);
+        
+        //return json_encode($newResponder);
+    }
+    
+    public function getEventFeedback2(Request $request, $event_id, $user_id) {
+        $newResponder = Feedback2Ans::where('user_id', $user_id)->where('event_id', $event_id)->exists();
+        
+        $feedback_ans = Feedback2Ans::where('user_id', $user_id)->where('event_id', $event_id)->get();
+        
+        if ($newResponder)
+        {
+            //return 1;
+           return view('api.feedback.feedback2_ans', compact('feedback_ans'))->with('user_id',$user_id)->with('event_id', $event_id);
+        }
+        
+        return view('api.feedback.feedback2')->with('user_id',$user_id)->with('event_id', $event_id);
+        
+        //return json_encode($newResponder);
+    }
+    
 }

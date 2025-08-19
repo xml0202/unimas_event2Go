@@ -14,4 +14,8 @@ class News extends Model
     public function event(){
         return $this->belongsTo(events::class);
     }
+    
+    protected $casts = [
+        'link' => 'array',
+    ];
 }

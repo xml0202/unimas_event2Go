@@ -1,0 +1,27 @@
+[20-Jul-2024 02:57:08 Asia/Kuala_Lumpur] PHP Fatal error:  Cannot redeclare App\Http\Controllers\API\EventController::getUpcomingEventsByYear() in /home/kuchingi/public_html/event.kuchingitsolution.net/app/Http/Controllers/API/EventController.php on line 213
+[21-Jul-2024 22:19:18 Asia/Kuala_Lumpur] PHP Fatal error:  Cannot redeclare App\Http\Controllers\API\EventController::store() in /home/kuchingi/public_html/event.kuchingitsolution.net/app/Http/Controllers/API/EventController.php on line 764
+[14-Dec-2024 20:34:52 UTC] PHP Warning:  require(/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php): Failed to open stream: No such file or directory in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[14-Dec-2024 20:34:52 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/autoload.php(25): ComposerAutoloaderInit6f7f474703d16d24d9404b66a1731a4b::getLoader()
+#2 /home/kuchingi/public_html/event.kuchingitsolution.net/public/index.php(34): require('/home/kuchingi/...')
+#3 {main}
+  thrown in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[14-Dec-2024 20:34:58 UTC] PHP Warning:  require(/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php): Failed to open stream: No such file or directory in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[14-Dec-2024 20:34:58 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/autoload.php(25): ComposerAutoloaderInit6f7f474703d16d24d9404b66a1731a4b::getLoader()
+#2 /home/kuchingi/public_html/event.kuchingitsolution.net/public/index.php(34): require('/home/kuchingi/...')
+#3 {main}
+  thrown in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[14-Dec-2024 20:35:00 UTC] PHP Warning:  require(/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php): Failed to open stream: No such file or directory in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[14-Dec-2024 20:35:00 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/../symfony/polyfill-php72/bootstrap.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/autoload.php(25): ComposerAutoloaderInit6f7f474703d16d24d9404b66a1731a4b::getLoader()
+#2 /home/kuchingi/public_html/event.kuchingitsolution.net/public/index.php(34): require('/home/kuchingi/...')
+#3 {main}
+  thrown in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
+[17-May-2025 00:37:50 Asia/Kuala_Lumpur] PHP Fatal error:  Cannot redeclare App\Filament\Pages\EventReportPage::getTitle() in /home/kuchingi/public_html/event.kuchingitsolution.net/app/Filament/Pages/EventReportPage.php on line 86

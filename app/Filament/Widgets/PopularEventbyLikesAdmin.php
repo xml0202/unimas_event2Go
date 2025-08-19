@@ -18,11 +18,11 @@ class PopularEventbyLikesAdmin extends BaseWidget
     protected function getTableQuery(): Builder
     {
         return Event::query()
-            ->select('events.*')
+            ->select('events.id', 'events.title')
             ->selectRaw('COUNT(upvote_downvotes.id) as total_likes')
             ->leftJoin('upvote_downvotes', 'events.id', '=', 'upvote_downvotes.event_id')
             ->where('admin_id', auth()->user()->id)
-            ->groupBy('events.id')
+            ->groupBy('events.id', 'events.title')
             ->orderByDesc(DB::raw('COUNT(upvote_downvotes.id)'));
     }
 
