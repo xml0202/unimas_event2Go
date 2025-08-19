@@ -13,11 +13,9 @@ return new class extends Migration
      */
     public function up()
     {
-        if (!Schema::hasColumn('events', 'comment_enabled')) {
-            Schema::table('events', function (Blueprint $table) {
-                $table->boolean('comment_enabled')->default(true)->after('earn_points');
-            });
-        }
+        Schema::table('activity_log', function(Blueprint $table) {
+            $table->longText('properties')->change();
+        });
     }
 
     /**
@@ -27,8 +25,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('events', function (Blueprint $table) {
-            $table->dropColumn('comment_enabled');
-        });
+        //
     }
 };

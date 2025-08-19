@@ -13,11 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
-        if (!Schema::hasColumn('events', 'comment_enabled')) {
-            Schema::table('events', function (Blueprint $table) {
-                $table->boolean('comment_enabled')->default(true)->after('earn_points');
-            });
-        }
+        Schema::table('events', function(Blueprint $table) {
+            $table->longText('pdf_files')->change();
+            $table->string('event_qr', 255)->nullable()->after('comment_enabled');
+            $table->decimal('Avgrating', 5, 2)->default(0)->after('report');
+        });
     }
 
     /**
@@ -27,8 +27,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('events', function (Blueprint $table) {
-            $table->dropColumn('comment_enabled');
-        });
+        //
     }
 };
