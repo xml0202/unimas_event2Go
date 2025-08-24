@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('ip_address', 55);
             $table->string('user_agent', 255);
-            $table->foreignId('event_id')->references('id')->on('events')->cascadeOnDelete();
+            // $table->foreignId('event_id')->references('id')->on('events')->cascadeOnDelete();
+            $table->unsignedInteger('event_id');
             $table->foreignId('user_id')->nullable()->references('id')->on('users')->cascadeOnDelete();
             $table->timestamps();
         });

@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('upvote_downvotes', function (Blueprint $table) {
             $table->id();
             $table->boolean('is_upvote');
-            $table->foreignId('event_id')->references('id')->on('events')->onDelete('cascade');
+            // $table->foreignId('event_id')->references('id')->on('events')->onDelete('cascade');
+            $table->unsignedInteger('event_id');
             $table->foreignId('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
