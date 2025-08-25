@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role;
+use Illuminate\Validation\Rule;
 
 class EventController extends Controller
 {
@@ -195,10 +196,31 @@ class EventController extends Controller
             'program_objective' => 'required|string',
             'program_impact' => 'required|string',
             'invitation' => 'nullable|string',
-            'registration_start_datetime' => 'required|date',
-            'registration_close_datetime' => 'required|date|after:registration_start_datetime',
-            'start_datetime' => 'required|date',
-            'end_datetime' => 'required|date|after:start_datetime',
+        
+            // Make date fields conditional
+            'registration_start_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+            ],
+            'registration_close_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+                'after:registration_start_datetime',
+            ],
+            'start_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+            ],
+            'end_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+                'after:start_datetime',
+            ],
+        
             'category' => [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -222,6 +244,7 @@ class EventController extends Controller
             'pic_email' => 'nullable|email|max:255',
             'pic_contact' => 'nullable|string|max:50'
         ]);
+
     
         /**
          * Handle image attachments
@@ -412,10 +435,31 @@ class EventController extends Controller
             'program_objective' => 'nullable|string',
             'program_impact' => 'nullable|string',
             'invitation' => 'nullable|string',
-            'registration_start_datetime' => 'required|date',
-            'registration_close_datetime' => 'required|date|after:registration_start_datetime',
-            'start_datetime' => 'nullable|date',
-            'end_datetime' => 'nullable|date|after:start_datetime',
+    
+            // ✅ conditional datetime rules
+            'registration_start_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+            ],
+            'registration_close_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+                'after:registration_start_datetime',
+            ],
+            'start_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+            ],
+            'end_datetime' => [
+                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable',
+                'date',
+                'after:start_datetime',
+            ],
+    
             'category' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -434,7 +478,6 @@ class EventController extends Controller
             'approval' => 'nullable|string',
             'comment_enabled' => 'nullable|boolean',
     
-            // new PIC fields
             'pic_name' => 'nullable|string|max:255',
             'pic_email' => 'nullable|email|max:255',
             'pic_contact' => 'nullable|string|max:50',

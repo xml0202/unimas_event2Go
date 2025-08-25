@@ -25,3 +25,14 @@ Stack trace:
 #3 {main}
   thrown in /home/kuchingi/public_html/event.kuchingitsolution.net/vendor/composer/autoload_real.php on line 41
 [17-May-2025 00:37:50 Asia/Kuala_Lumpur] PHP Fatal error:  Cannot redeclare App\Filament\Pages\EventReportPage::getTitle() in /home/kuchingi/public_html/event.kuchingitsolution.net/app/Filament/Pages/EventReportPage.php on line 86
+[19-Aug-2025 18:23:50 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19312873 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[19-Aug-2025 18:27:57 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19312874 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[20-Aug-2025 14:52:39 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 18968290 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[20-Aug-2025 15:02:41 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19114615 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[20-Aug-2025 15:09:54 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19114700 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[20-Aug-2025 15:20:49 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19306926 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[24-Aug-2025 15:01:53 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 56927898 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[24-Aug-2025 15:05:52 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 38021273 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[24-Aug-2025 22:51:01 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19113277 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[24-Aug-2025 22:54:10 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19113299 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
+[24-Aug-2025 23:11:59 UTC] PHP Warning:  PHP Request Startup: POST Content-Length of 19113331 bytes exceeds the limit of 8388608 bytes in Unknown on line 0
