@@ -49,14 +49,14 @@ class EventController extends Controller
                       ->join('profiles', 'users.id', '=', 'profiles.user_id')
                       ->wherePivot('status', 'accepted');
             }])
-            ->where('end_datetime', '>=', now())
+            ->where(function ($query) {
+                $query->whereNull('end_datetime')
+                      ->orWhere('end_datetime', '>=', now());
+            })
             ->get();
     
         $eventList = $events->map(function ($event) {
-            $eventData = $event->toArray(); // includes all columns from the `events` table
-    
-            // $eventData['total_attendees'] = $event->attendees_count;
-            // $eventData['total_views'] = $event->views_count;
+            $eventData = $event->toArray();
     
             $eventData['officers'] = $event->officers->map(function ($officer) {
                 return [
@@ -73,6 +73,7 @@ class EventController extends Controller
     
         return response()->json(['data' => $eventList]);
     }
+
 
     
     public function uploadPdf(Request $request, $eventId)
@@ -621,14 +622,18 @@ class EventController extends Controller
     public function getEventsbyCategory($category_id)
     {
         $events = Event::join('categories', 'events.category', '=', 'categories.category_name')
-            ->where('events.end_datetime', '>=', now())
+            ->where(function ($query) {
+                $query->whereNull('events.end_datetime')
+                      ->orWhere('events.end_datetime', '>=', now());
+            })
             ->where('events.status', 1)
-            ->where('categories.id', '=', $category_id)
+            ->where('categories.id', $category_id)
             ->select('events.*', 'categories.category_name as category_name')
             ->get();
-
+    
         return response()->json(['events' => $events], 200);
     }
+
     
     public function getOngoingEvents()
     {
