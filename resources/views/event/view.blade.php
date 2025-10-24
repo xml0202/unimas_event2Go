@@ -73,13 +73,13 @@
                     </div>
                     <!-- Join Event Button -->
                     <div class="flex justify-end">
-                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(Request::url()) }}&amp;
-                        quote={{ urlencode($event->title) }}&amp;media={{ urlencode($event->getThumbnail()) }}" 
-                        target="_blank" 
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
-                        <i class="fab fa-facebook mr-2"></i> <!-- Font Awesome Facebook icon -->
-                        Share
-                    </a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(Request::url()) }}&quote={{ urlencode($event->title) }}"
+                           target="_blank"
+                           class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
+                           <i class="fab fa-facebook mr-2"></i>
+                           Share
+                        </a>
+
                         @auth
                             @if(auth()->user()->hasRole('User'))
                                 @php
