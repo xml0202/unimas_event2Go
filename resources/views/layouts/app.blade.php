@@ -112,9 +112,9 @@
                                         <x-dropdown-link :href="route('bookmarked-event')">
                                             {{ __('Bookmarked') }}
                                         </x-dropdown-link>
-                                        <x-dropdown-link :href="route('profile.edit')">
-                                            {{ __('Profile') }}
-                                        </x-dropdown-link>
+                                        <!--<x-dropdown-link :href="route('profile.edit')">-->
+                                        <!--    {{ __('Profile') }}-->
+                                        <!--</x-dropdown-link>-->
                                     @endif
                                 @else
                                     <x-dropdown-link :href="route('profile.edit')">
@@ -138,7 +138,7 @@
                         </x-dropdown>
                     </div>
                 @else
-                    <a href="{{route('login_unimas')}}"
+                    <a href="{{route('auth.redirect')}}"
                        class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">Login</a>
                     <!--<a href="{{route('register')}}" class="bg-blue-600 text-white rounded py-2 px-4 mx-2">Register</a>-->
                 @endauth
