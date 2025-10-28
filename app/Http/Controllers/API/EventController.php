@@ -184,9 +184,7 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
-        // Validate the request
         $validatedData = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'title' => 'required|string',
             'attachment' => 'required|array',
             'attachment.*' => 'required|string',
@@ -197,31 +195,25 @@ class EventController extends Controller
             'program_objective' => 'required|string',
             'program_impact' => 'required|string',
             'invitation' => 'nullable|string',
-        
-            // Make date fields conditional
+    
+            // Conditional date fields
             'registration_start_datetime' => [
                 Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
+                'nullable', 'date',
             ],
             'registration_close_datetime' => [
                 Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
-                'after:registration_start_datetime',
+                'nullable', 'date', 'after:registration_start_datetime',
             ],
             'start_datetime' => [
                 Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
+                'nullable', 'date',
             ],
             'end_datetime' => [
                 Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
-                'after:start_datetime',
+                'nullable', 'date', 'after:start_datetime',
             ],
-        
+    
             'category' => [
                 'required',
                 function ($attribute, $value, $fail) {
@@ -245,7 +237,6 @@ class EventController extends Controller
             'pic_email' => 'nullable|email|max:255',
             'pic_contact' => 'nullable|string|max:50'
         ]);
-
     
         /**
          * Handle image attachments
@@ -253,8 +244,6 @@ class EventController extends Controller
         $attachments = [];
         foreach ($validatedData['attachment'] as $attachmentData) {
             $fileContent = base64_decode($attachmentData);
-    
-            // Detect mime type for images
             $finfo = finfo_open();
             $mimeType = finfo_buffer($finfo, $fileContent, FILEINFO_MIME_TYPE);
             finfo_close($finfo);
@@ -262,26 +251,23 @@ class EventController extends Controller
             $extension = match ($mimeType) {
                 'image/jpeg' => 'jpg',
                 'image/png' => 'png',
-                default => 'jpg', // fallback to jpg
+                default => 'jpg',
             };
     
             $fileName = Str::random(20) . '.' . $extension;
             Storage::disk('public')->put($fileName, $fileContent);
-    
             $attachments[] = $fileName;
         }
     
         $validatedData['attachment'] = $attachments;
     
         /**
-         * Handle optional doc files
+         * Handle optional document files
          */
         $docFiles = [];
         if (!empty($validatedData['pdf_files'])) {
             foreach ($validatedData['pdf_files'] as $docData) {
                 $fileContent = base64_decode($docData);
-    
-                // Detect MIME type
                 $finfo = finfo_open();
                 $mimeType = finfo_buffer($finfo, $fileContent, FILEINFO_MIME_TYPE);
                 finfo_close($finfo);
@@ -294,37 +280,39 @@ class EventController extends Controller
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
                     'application/vnd.ms-powerpoint' => 'ppt',
                     'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
-                    default => 'bin', // unknown file
+                    default => 'bin',
                 };
     
                 $fileName = Str::random(20) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $fileContent);
-    
                 $docFiles[] = $fileName;
             }
     
             $validatedData['pdf_files'] = $docFiles;
         }
     
-        // Add admin_id and status
-        $adminId = AgencyUser::where('user_id', $validatedData['user_id'])->value('admin_id');
+        // ðŸ”¹ Get the authenticated user ID from token
+        $userId = auth()->id();
+    
+        // ðŸ”¹ Add admin_id and status
+        $adminId = AgencyUser::where('user_id', $userId)->value('admin_id');
         $validatedData['admin_id'] = $adminId;
+        $validatedData['user_id'] = $userId;
         $validatedData['status'] = $request->approval ? 2 : 1;
     
-        // Create the event
+        // ðŸ”¹ Create the event
         $event = Event::create($validatedData);
     
-        // Send notifications
+        // ðŸ”¹ Send notifications
         if ($validatedData['status'] == 1) {
             $this->sendNotificationUsingFCMHttpV1(['user'], "New Event", $validatedData['title'], $event->id);
     
             $users = User::role('User')->whereNotNull('fcm_token')->get();
-    
             foreach ($users as $user) {
                 Notification::create([
                     'event_id'  => $event->id,
                     'user_id'   => $user->id,
-                    'sender_id' => auth()->id() ?? 1, // avoid hardcoding
+                    'sender_id' => $userId,
                     'type'      => "New Event",
                     'title'     => $event->title,
                     'body'      => $event->introduction,
@@ -334,7 +322,6 @@ class EventController extends Controller
             $this->sendNotificationUsingFCMHttpV1(['admin'], "New Event Approval", $validatedData['title'], $event->id, $adminId);
         }
     
-        // Return response
         return response()->json([
             'message' => 'Event created successfully',
             'event'   => new EventResource($event),
@@ -343,31 +330,25 @@ class EventController extends Controller
 
 
 
-    public function show($id)
+
+    public function show(Request $request, $id)
     {
         try {
-            $userId = auth()->id();
-            
-            // Fetch the event along with comments, likes, bookmarks, attendees, and officers
+            $userId = $request->user()?->id;
+    
             $event = Event::with([
-                'comments.user.profile',
-                'comments.user' => function ($query) {
-                    $query->select('id', 'name'); // Add any other columns you need from the users table
-                },
-                'comments.user.profile' => function ($query) {
-                    $query->select('user_id', 'picture'); // Add any other columns you need from the profiles table
-                }
+                'comments.user:id,name',
+                'comments.user.profile:user_id,picture'
             ])
-            ->withCount('likes', 'bookmarks', 'attendees')
+            ->withCount(['likes', 'bookmarks', 'attendees'])
             ->findOrFail($id);
     
-            // Get the list of officers for the event
             $officers = User::select('users.id', 'users.name', 'profiles.picture', 'profiles.phoneNo', 'profiles.email')
-                            ->join('officers', 'users.id', '=', 'officers.user_id')
-                            ->join('profiles', 'users.id', '=', 'profiles.user_id')
-                            ->where('officers.event_id', $id)
-                            ->where('officers.status', 'accepted') // Only include officers with accepted status
-                            ->get();
+                ->join('officers', 'users.id', '=', 'officers.user_id')
+                ->join('profiles', 'users.id', '=', 'profiles.user_id')
+                ->where('officers.event_id', $id)
+                ->where('officers.status', 'accepted')
+                ->get();
     
             $liked = $event->userLike($userId)->exists() ? 1 : 0;
             $bookmarked = $event->userBookmark($userId)->exists() ? 1 : 0;
@@ -379,25 +360,22 @@ class EventController extends Controller
                       ->orWhere('team_member_4', $userId)
                       ->orWhere('team_member_5', $userId);
             })->exists() ? 1 : 0;
+    
             $eventArray = $event->toArray();
     
-            // Customize the comments output
             foreach ($eventArray['comments'] as &$comment) {
                 $comment['profile_picture'] = $comment['user']['profile']['picture'];
                 $comment['name'] = $comment['user']['name'];
-                unset($comment['user']); // Remove the user object if not needed
+                unset($comment['user']);
             }
     
-            // Customize the officers output
-            $officersArray = $officers->map(function ($officer) {
-                return [
-                    'id' => $officer->id,
-                    'name' => $officer->name,
-                    'email' => $officer->email,
-                    'phone_no' => $officer->phoneNo,
-                    'profile_picture' => $officer->picture ?? null
-                ];
-            });
+            $officersArray = $officers->map(fn ($officer) => [
+                'id' => $officer->id,
+                'name' => $officer->name,
+                'email' => $officer->email,
+                'phone_no' => $officer->phoneNo,
+                'profile_picture' => $officer->picture,
+            ]);
     
             return response()->json([
                 'data' => $eventArray,
@@ -407,7 +385,7 @@ class EventController extends Controller
                 'user_team_joined' => $team_joined,
                 'total_attendees' => $event->attendees()->count(),
                 'total_views' => $event->views()->count(),
-                'officers' => $officersArray // Include the officers in the response
+                'officers' => $officersArray,
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['message' => 'Event not found'], 404);
@@ -415,15 +393,15 @@ class EventController extends Controller
     }
 
 
+
     
     public function update(Request $request, $id)
     {
-        // Find the event by ID
         $event = Event::findOrFail($id);
+        $authUser = $request->user(); // Automatically resolved from Bearer token
     
-        // Validate request
+        // Validate request (no more user_id)
         $validatedData = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'title' => 'nullable|string',
             'attachment' => 'nullable|array',
             'attachment.*' => 'nullable|string',
@@ -437,28 +415,21 @@ class EventController extends Controller
             'program_impact' => 'nullable|string',
             'invitation' => 'nullable|string',
     
-            // ✅ conditional datetime rules
             'registration_start_datetime' => [
-                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
+                Rule::requiredIf(fn() => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable', 'date',
             ],
             'registration_close_datetime' => [
-                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
-                'after:registration_start_datetime',
+                Rule::requiredIf(fn() => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable', 'date', 'after:registration_start_datetime',
             ],
             'start_datetime' => [
-                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
+                Rule::requiredIf(fn() => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable', 'date',
             ],
             'end_datetime' => [
-                Rule::requiredIf(fn () => !in_array($request->category, ['Ad', 'Explorer'])),
-                'nullable',
-                'date',
-                'after:start_datetime',
+                Rule::requiredIf(fn() => !in_array($request->category, ['Ad', 'Explorer'])),
+                'nullable', 'date', 'after:start_datetime',
             ],
     
             'category' => [
@@ -478,50 +449,39 @@ class EventController extends Controller
             'approved' => 'nullable|boolean',
             'approval' => 'nullable|string',
             'comment_enabled' => 'nullable|boolean',
-    
             'pic_name' => 'nullable|string|max:255',
             'pic_email' => 'nullable|email|max:255',
             'pic_contact' => 'nullable|string|max:50',
         ]);
     
         /**
-         * Handle attachments if provided
+         * Handle image attachments
          */
         if (!empty($validatedData['attachment'])) {
             $attachments = [];
             foreach ($validatedData['attachment'] as $attachmentData) {
                 $fileContent = base64_decode($attachmentData);
-    
-                $finfo = finfo_open();
-                $mimeType = finfo_buffer($finfo, $fileContent, FILEINFO_MIME_TYPE);
-                finfo_close($finfo);
-    
+                $mimeType = finfo_buffer(finfo_open(), $fileContent, FILEINFO_MIME_TYPE);
                 $extension = match ($mimeType) {
                     'image/jpeg' => 'jpg',
                     'image/png' => 'png',
                     default => 'jpg',
                 };
-    
                 $fileName = Str::random(20) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $fileContent);
-    
                 $attachments[] = $fileName;
             }
             $validatedData['attachment'] = $attachments;
         }
     
         /**
-         * Handle pdf_files if provided
+         * Handle PDF / Office documents
          */
         if (!empty($validatedData['pdf_files'])) {
             $docFiles = [];
             foreach ($validatedData['pdf_files'] as $docData) {
                 $fileContent = base64_decode($docData);
-    
-                $finfo = finfo_open();
-                $mimeType = finfo_buffer($finfo, $fileContent, FILEINFO_MIME_TYPE);
-                finfo_close($finfo);
-    
+                $mimeType = finfo_buffer(finfo_open(), $fileContent, FILEINFO_MIME_TYPE);
                 $extension = match ($mimeType) {
                     'application/pdf' => 'pdf',
                     'application/msword' => 'doc',
@@ -532,25 +492,21 @@ class EventController extends Controller
                     'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
                     default => 'bin',
                 };
-    
                 $fileName = Str::random(20) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $fileContent);
-    
                 $docFiles[] = $fileName;
             }
             $validatedData['pdf_files'] = $docFiles;
         }
     
-        // Update admin_id from user
-        $adminId = AgencyUser::where('user_id', $validatedData['user_id'])->value('admin_id');
-        $validatedData['admin_id'] = $adminId;
+        // Use the authenticated user to find their admin ID
+        $validatedData['admin_id'] = AgencyUser::where('user_id', $authUser->id)->value('admin_id');
     
-        // Update status if approval is provided
+        // Handle approval status
         if ($request->has('approval')) {
             $validatedData['status'] = $request->approval ? 2 : 1;
         }
     
-        // Update the event
         $event->update($validatedData);
     
         return response()->json([
@@ -558,6 +514,7 @@ class EventController extends Controller
             'event'   => new EventResource($event),
         ], 200);
     }
+
 
     
     public function destroy($id)
@@ -972,9 +929,14 @@ class EventController extends Controller
 
     public function joinEvent(Request $request)
     {
+        $user = $request->user();
+    
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+    
         $validatedData = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'user_id' => 'required|exists:users,id',
             'event_date' => 'required|date',
             'gender' => 'required',
             'mobile_no' => 'required',
@@ -989,10 +951,8 @@ class EventController extends Controller
         ]);
     
         $event = Event::findOrFail($validatedData['event_id']);
-        $user = User::findOrFail($validatedData['user_id']);
         $eventDate = Carbon::parse($validatedData['event_date']);
     
-        // Validate event date range
         if (
             $eventDate->lt(Carbon::parse($event->start_datetime)->startOfDay()) ||
             $eventDate->gt(Carbon::parse($event->end_datetime)->endOfDay())
@@ -1000,7 +960,6 @@ class EventController extends Controller
             return response()->json(['message' => 'Invalid event date selected'], 400);
         }
     
-        // Validate registration window
         $now = now();
         if (
             $now->lt(Carbon::parse($event->registration_start_datetime)) ||
@@ -1009,18 +968,16 @@ class EventController extends Controller
             return response()->json(['message' => 'Registration is closed'], 400);
         }
     
-        // Check if already registered for this specific event day
         $existing = AttendeeEventDay::where('event_date', $eventDate->toDateString())
-            ->whereHas('attendee', function ($q) use ($validatedData) {
-                $q->where('user_id', $validatedData['user_id'])
-                  ->where('event_id', $validatedData['event_id']);
+            ->whereHas('attendee', function ($q) use ($user, $event) {
+                $q->where('user_id', $user->id)
+                  ->where('event_id', $event->id);
             })->first();
     
         if ($existing) {
             return response()->json(['message' => 'Already registered for this event date'], 400);
         }
     
-        // Check for existing attendee record
         $attendee = Attendee::where('user_id', $user->id)
             ->where('event_id', $event->id)
             ->latest()
@@ -1065,34 +1022,12 @@ class EventController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-    
-                // Optional: delay if database is slow (only for debugging)
-                // sleep(1);
-    
             } catch (\Exception $e) {
                 \Log::error('Failed to create attendee: ' . $e->getMessage());
                 return response()->json(['message' => 'Failed to create attendee'], 500);
             }
         }
     
-        // Double-check if attendee exists
-        if (!$attendee || !$attendee->id) {
-            // Re-fetch in case the DB write is delayed
-            $attendee = Attendee::where('user_id', $user->id)
-                ->where('event_id', $event->id)
-                ->latest()
-                ->first();
-    
-            if (!$attendee || !$attendee->id) {
-                \Log::error('Failed to retrieve attendee after creation', [
-                    'user_id' => $user->id,
-                    'event_id' => $event->id,
-                ]);
-                return response()->json(['message' => 'Failed to create or retrieve attendee'], 500);
-            }
-        }
-    
-        // Register event date
         try {
             AttendeeEventDay::create([
                 'attendee_id' => $attendee->id,
@@ -1113,21 +1048,24 @@ class EventController extends Controller
     }
 
 
-
-
     public function unjoinEvent(Request $request)
     {
+        $user = $request->user();
+    
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+    
+        
         $validatedData = $request->validate([
-            'user_id' => 'required|exists:users,id',
             'event_id' => 'required|exists:events,id',
             'event_date' => 'required|date',
         ]);
     
         $event = Event::findOrFail($validatedData['event_id']);
-        $user = User::findOrFail($validatedData['user_id']);
         $eventDate = Carbon::parse($validatedData['event_date']);
     
-        // Ensure event date is within event period
+        
         if (
             $eventDate->lt(Carbon::parse($event->start_datetime)->startOfDay()) ||
             $eventDate->gt(Carbon::parse($event->end_datetime)->endOfDay())
@@ -1135,12 +1073,10 @@ class EventController extends Controller
             return response()->json(['message' => 'Invalid event date selected'], 400);
         }
     
-        // Check if the event is ongoing or in the past
         if ($eventDate->isToday() || $eventDate->isPast()) {
             return response()->json(['message' => 'Cannot unjoin from ongoing or past event date'], 400);
         }
     
-        // Find the corresponding attendee
         $attendee = Attendee::where('user_id', $user->id)
             ->where('event_id', $event->id)
             ->latest()
@@ -1150,7 +1086,6 @@ class EventController extends Controller
             return response()->json(['message' => 'User is not registered for this event'], 400);
         }
     
-        // Check if the attendee is registered for the specific date
         $eventDay = AttendeeEventDay::where('attendee_id', $attendee->id)
             ->where('event_date', $eventDate->toDateString())
             ->first();
@@ -1511,74 +1446,80 @@ class EventController extends Controller
     public function attendanceEvent(Request $request)
     {
         $eventId = $request->input('event_id');
-        $userId = $request->input('user_id');
         $tag = $request->input('tag');
         $qrEventId = $request->input('qr_event');
     
-        // Validate required parameters
+        // Prefer authenticated user over input
+        $userId = $request->user()->id ?? $request->input('user_id');
+    
         if (!$userId || !$eventId) {
             return response()->json(['status' => "400", 'msg' => 'Missing required parameters']);
         }
     
-        // Get attendee_id based on event_id and user_id
-        $attendeeId = Attendee::where('event_id', $eventId)
-                              ->where('user_id', $userId)
-                              ->value('id');
-    
-        if (!$attendeeId) {
-            return response()->json(['status' => "409", 'msg' => 'Record not found']);
-        }
-    
-        // Find attendee based on tag
-        $attendee = ($tag === "manual")
-            ? Attendee::where('id', $attendeeId)->first()
-            : ($qrEventId != $eventId ? null : Attendee::find($attendeeId));
-    
-        if (!$attendee) {
-            return response()->json(['status' => "409", 'msg' => 'Record not found or Wrong event']);
-        }
-    
-        // Retrieve event and check time validity
+        // Validate event existence first
         $event = Event::find($eventId);
-        if (!$event || !$this->is_time_valid($event->start_datetime, $event->end_datetime)) {
+        if (!$event) {
+            return response()->json(['status' => "404", 'msg' => 'Event not found']);
+        }
+    
+        // ✅ Validate the QR code matches current event_qr in DB
+        if ($tag !== 'manual' && $qrEventId !== $event->event_qr) {
+            return response()->json(['status' => "409", 'msg' => 'Invalid or expired QR code']);
+        }
+    
+        // Validate time window
+        if (!$this->is_time_valid($event->start_datetime, $event->end_datetime)) {
             return response()->json(['status' => "409", 'msg' => 'Attendance is out of the available period']);
         }
     
-        // Check if already attended
+        // Validate attendee record
+        $attendee = Attendee::where('event_id', $eventId)
+            ->where('user_id', $userId)
+            ->first();
+    
+        if (!$attendee) {
+            return response()->json(['status' => "409", 'msg' => 'Record not found']);
+        }
+    
+        // Check duplicate attendance
         if ($attendee->attended) {
             return response()->json(['success' => false, 'msg' => 'Attendance has already been recorded']);
         }
     
-        // Record attendance and update attendee status
+        // Record attendance
         Attendance::create([
             'event_id' => $eventId,
             'user_id' => $userId,
-            'check_in_date' => Carbon::now()->toDateString()
+            'check_in_date' => now()->toDateString(),
         ]);
-        $attendee->update(['attended' => 1]);
     
-        // Calculate attendance statistics
+        $attendee->update(['attended' => true]);
+    
         $totalAttendees = Attendee::where('event_id', $eventId)->where('approved', 1)->count();
         $attendedCount = Attendee::where('event_id', $eventId)->where('attended', 1)->count();
     
-        // Return response based on tag
-        if ($tag === "manual") {
-            $pendingAttendees = Attendee::with('user')->where('event_id', $eventId)->where('attended', 0)->get();
+        // If manual mode, return pending attendees
+        if ($tag === 'manual') {
+            $pendingAttendees = Attendee::with('user')
+                ->where('event_id', $eventId)
+                ->where('attended', 0)
+                ->get();
+    
             return response()->json(['attendees' => $pendingAttendees]);
         }
     
-        $user = User::find($userId);
         return response()->json([
             'status' => "200",
             'data' => [
-                'user' => $user,
+                'user' => $request->user() ?? User::find($userId),
                 'attendee' => $attendee,
                 'totalAttendees' => $totalAttendees,
                 'attendedCount' => $attendedCount
             ]
         ]);
     }
-    
+
+
 
     private function is_time_valid($startTime, $endTime)
     {
@@ -2061,7 +2002,7 @@ class EventController extends Controller
             // Include the team leader in the points assignment
             $memberIds = array_filter([$team->team_leader, $team->team_member_1, $team->team_member_2, $team->team_member_3, $team->team_member_4, $team->team_member_5]);
     
-            // Loop through each member and insert points if they haven’t already been assigned
+            // Loop through each member and insert points if they havenâ€™t already been assigned
             foreach ($memberIds as $member_id) {
                 if ($member_id) { // Ensure there's a member ID
                     $existingPoint = Point::where('user_id', $member_id)
@@ -2236,6 +2177,7 @@ class EventController extends Controller
                 'id' => $team->id,
                 'event_id' => $team->event_id,
                 'team_name' => $team->team_name,
+                'date' => $team->event_date,
                 'team_leader' => $teamLeader ? [
                     'user_id' => $teamLeader->id,
                     'name' => $teamLeader->name,
@@ -2498,21 +2440,23 @@ class EventController extends Controller
     {
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'user_id'  => 'nullable|exists:users,id',
         ]);
-
+    
+        $user = $request->user(); // From Bearer token (sanctum/passport/etc)
+    
         $view = EventView::create([
             'event_id'   => $validated['event_id'],
-            'user_id'    => $validated['user_id'],
+            'user_id'    => $user?->id, // Automatically null if not logged in
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
-
+    
         return response()->json([
             'message' => 'Event view recorded.',
             'data'    => $view,
         ], 201);
     }
+
 
     public function storeFcmToken(Request $request)
     {
