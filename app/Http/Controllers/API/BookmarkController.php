@@ -30,18 +30,21 @@ class BookmarkController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $user = $request->user(); // ← Authenticated user from token
+    
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+    
+        $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'user_id' => 'required|exists:users,id',
         ], [
             'event_id.required' => 'The event ID field is required.',
             'event_id.exists' => 'The selected event ID is invalid.',
-            'user_id.required' => 'The user ID field is required.',
-            'user_id.exists' => 'The selected user ID is invalid.',
         ]);
-
-        $event_id = $request->input('event_id');
-        $user_id = $request->input('user_id');
+    
+        $event_id = $validated['event_id'];
+        $user_id = $user->id; // ← Automatically use logged-in user
     
         // Check if the bookmark already exists
         $existingBookmark = Bookmark::where('event_id', $event_id)
@@ -49,14 +52,27 @@ class BookmarkController extends Controller
                                     ->first();
     
         if ($existingBookmark) {
-            return response()->json(['message' => 'Bookmark already exists for this user and event'], Response::HTTP_CONFLICT);
+            return response()->json([
+                'message' => 'Bookmark already exists for this user and event'
+            ], Response::HTTP_CONFLICT);
         }
     
         try {
-            $bookmark = Bookmark::create($request->all());
-            return response()->json(['message' => 'Bookmark created successfully', 'bookmark' => $bookmark], Response::HTTP_CREATED);
+            $bookmark = Bookmark::create([
+                'event_id' => $event_id,
+                'user_id' => $user_id,
+            ]);
+    
+            return response()->json([
+                'message' => 'Bookmark created successfully',
+                'bookmark' => $bookmark
+            ], Response::HTTP_CREATED);
+    
         } catch (QueryException $e) {
-            return response()->json(['message' => 'Failed to create bookmark'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return response()->json([
+                'message' => 'Failed to create bookmark',
+                'error' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
