@@ -31,7 +31,7 @@ class NewsController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'event_id' => 'required',
+            'event_id' => 'required|exists:events,id',
             'title' => 'required',
             'description' => 'required',
             'link' => 'nullable',
