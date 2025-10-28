@@ -68,55 +68,68 @@ class LikeController extends Controller
     {
         $validatedData = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'user_id' => 'required|exists:users,id',
         ], [
             'event_id.required' => 'The event ID field is required.',
             'event_id.exists' => 'The selected event ID is invalid.',
-            'user_id.required' => 'The user ID field is required.',
-            'user_id.exists' => 'The selected user ID is invalid.',
         ]);
+    
+        // Get user from token
+        $user = $request->user();
+    
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
+        }
     
         // Check if the like already exists
         if (UpvoteDownvote::where([
             ['event_id', $validatedData['event_id']],
-            ['user_id', $validatedData['user_id']],
+            ['user_id', $user->id],
         ])->exists()) {
             return response()->json(['message' => 'Like already exists for this user and event'], Response::HTTP_CONFLICT);
         }
     
         // Create a new like record
-        $like = UpvoteDownvote::create($validatedData + ['is_upvote' => true]);
+        $like = UpvoteDownvote::create([
+            'event_id' => $validatedData['event_id'],
+            'user_id' => $user->id,
+            'is_upvote' => true,
+        ]);
     
-        return response()->json(['message' => 'Event liked successfully', 'like' => $like], Response::HTTP_CREATED);
+        return response()->json([
+            'message' => 'Event liked successfully',
+            'like' => $like,
+        ], Response::HTTP_CREATED);
     }
     
     public function unlike(Request $request)
     {
-        // Validate JSON request data
-        $request->validate([
-            'event_id' => 'required|exists:upvote_downvotes,event_id',
-            'user_id' => 'required|exists:upvote_downvotes,user_id',
+        // Validate only the event_id
+        $validatedData = $request->validate([
+            'event_id' => 'required|exists:events,id',
         ], [
             'event_id.required' => 'The event ID field is required.',
             'event_id.exists' => 'The selected event ID is invalid.',
-            'user_id.required' => 'The user ID field is required.',
-            'user_id.exists' => 'The selected user ID is invalid.',
         ]);
     
-        // Extract event ID and user ID from JSON payload
-        $eventId = $request->input('event_id');
-        $userId = $request->input('user_id');
+        // Get user from token
+        $user = $request->user();
     
-        try {
-            // Find the bookmark by event ID and user ID
-            $like = UpvoteDownvote::where('event_id', $eventId)->where('user_id', $userId)->firstOrFail();
-            
-            // Delete the bookmark
-            $like->delete();
-            
-            return response()->json(['message' => 'Like deleted successfully'], 200);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], Response::HTTP_UNAUTHORIZED);
+        }
+    
+        // Find the like record for this user + event
+        $like = UpvoteDownvote::where('event_id', $validatedData['event_id'])
+            ->where('user_id', $user->id)
+            ->first();
+    
+        if (!$like) {
             return response()->json(['message' => 'Like not found'], Response::HTTP_NOT_FOUND);
         }
+    
+        // Delete the record
+        $like->delete();
+    
+        return response()->json(['message' => 'Like deleted successfully'], Response::HTTP_OK);
     }
 }
