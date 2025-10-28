@@ -20,6 +20,8 @@ use Laravel\Passport\Passport;
 use Laravel\Passport\Token;
 use App\Http\Controllers\ExternalController;
 use App\Http\HttpClient;
+use Illuminate\Support\Str;
+
 
 class AuthController extends Controller
 {
@@ -290,99 +292,73 @@ class AuthController extends Controller
     
     public function login_unimas(Request $request)
     {
+        // Get full JSON payload from Flutter
+        $user_profile = $request->all();
 
-        // Validation
-        $request->validate([
-            // "email" => "required|string|email",
-            "username" => "required",
-            // "password" => "required"
-        ]);
+        // Build user data for 'users' table
+        $userData = [
+            'username'          => $user_profile['username'] ?? null,
+            'name'              => $user_profile['fullname'] ?? $user_profile['username'] ?? 'Unknown',
+            'email'             => $user_profile['email'] ?? null,
+            'password'          => bcrypt(Str::random(12)), // random password for OAuth
+            'email_verified_at' => now(),
+        ];
 
+        // Create or update user
+        $auth_user = User::updateOrCreate(
+            ['username' => $userData['username']],
+            $userData
+        );
 
-        // Check user by "email" value
-        // $user = User::where("email", $request->email)->first();
-        $externalController = new ExternalController;
-        $http_response    = $externalController->postRequest($request);
-        $response         = json_decode($http_response->getContent());
-        // dd($response);
-        if (isset($response->active) && isset($response->access_token)) {
-            $user_profile = HttpClient::base_client($response->access_token);
-            $user_profile = json_decode($user_profile, true);
+        // Build profile data with snake_case keys
+        $profileData = [
+            'user_id'          => $auth_user->id,
+            'username'         => $user_profile['username'] ?? null,
+            'universityId'    => $user_profile['universityId'] ?? null,
+            'fullname'         => $user_profile['fullname'] ?? null,
+            'email'            => $user_profile['email'] ?? null,
+            'altEmail'        => $user_profile['altEmail'] ?? null,
+            'departmentCode'  => $user_profile['departmentCode'] ?? null,
+            'departmentName'  => $user_profile['departmentName'] ?? null,
+            'salutation'       => $user_profile['salutation'] ?? null,
+            'phoneNo'         => $user_profile['phoneNo'] ?? null,
+            'officeCode'      => $user_profile['officeCode'] ?? null,
+            'officeName'      => $user_profile['officeName'] ?? null,
+            'category'         => $user_profile['category'] ?? null,
+            'categoryCode'    => $user_profile['categoryCode'] ?? null,
+            'nationalId'      => $user_profile['nationalId'] ?? null,
+            'staff'            => $user_profile['staff'] ?? false,
+            'picture'          => $user_profile['picture'] ?? null,
+            'extra'            => $user_profile['extra'] ?? [],
+            'authorities'      => $user_profile['authorities'] ?? [],
+        ];
 
-            $user = [
-                'name'              => $user_profile['name'],
-                'email'             => $user_profile['email'],
-                'password'          => bcrypt($request->password),
-                'email_verified_at' => date('Y-m-d H:i:s'),
-                'username'          => $user_profile['username'],
-            ];
+        // Create or update profile
+        $auth_user->profile()->updateOrCreate(
+            ['user_id' => $auth_user->id],
+            $profileData
+        );
 
-            $auth_user = User::firstOrCreate(['username' => $user['username']], $user);
-            $user_profile['user_id'] = $auth_user->id;
-
-            $profile = $auth_user->profile()->firstOrCreate(['user_id' => $auth_user->id], $user_profile);
-            // if ($profile->category == "STAFF")
-            // {
-            //     $auth_user->assignRole('Agency');
-            // }
-            // else
-            // {
-            //     $auth_user->assignRole('User');
-            // }
+        // Assign role if not already assigned
+        if (!$auth_user->hasRole('User')) {
             $auth_user->assignRole('User');
-            // $request->authenticate();
-            $roles = $auth_user->roles()->pluck('name');
-            $token = $auth_user->createToken("myToken")->accessToken;
-            return response()->json([
-                "status" => true,
-                'user' => $auth_user,
-                'role' => $roles,
-                "message" => "User logged in successfully",
-                "token" => $token
-            ]);
-        } else {
-            if ($response->errors == 419) {
-                return response()->json([
-                    "status" => false,
-                    "message" => "Password didn't match"
-                ]);
-            } else {
-                return response()->json([
-                    "status" => false,
-                    "message" => "Invalid credentials"
-                ]);
-            }
         }
 
-        // Check user by "password" value
+        // Create access token
+        $token = $auth_user->createToken("myToken")->accessToken;
+        $roles = $auth_user->roles()->pluck('name')->toArray(); // ensure array
 
-        // if (!empty($user)) {
-
-        //     if (Hash::check($request->password, $user->password)) {
-
-        //         // Auth Token value
-        //         $token = $user->createToken("myToken")->accessToken;
-
-        //         return response()->json([
-        //             "status" => true,
-        //             "message" => "User logged in successfully",
-        //             "token" => $token
-        //         ]);
-        //     } else {
-
-        //         return response()->json([
-        //             "status" => false,
-        //             "message" => "Password didn't match"
-        //         ]);
-        //     }
-        // } else {
-
-        //     return response()->json([
-        //         "status" => false,
-        //         "message" => "Invalid credentials"
-        //     ]);
-        // }
+        // Return response
+        return response()->json([
+            "status"  => true,
+            "message" => "User logged in successfully",
+            "user"    => $auth_user,
+            "profile" => $auth_user->profile,
+            "role"    => $roles,
+            "token"   => $token,
+        ]);
     }
+
     
     public function profile()
     {
