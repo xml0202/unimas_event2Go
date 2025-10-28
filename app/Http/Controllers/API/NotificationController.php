@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Notification;
+use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
@@ -28,17 +29,27 @@ class NotificationController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $user = $request->user();
+        
+        $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'user_id' => 'required|exists:users,id',
             'title' => 'required',
             'body' => 'required',
             'sender_id' => 'nullable'
         ]);
 
-        $notification = Notification::create($request->all());
+        $notification = Notification::create([
+            'event_id' => $validated['event_id'],
+            'user_id' => $user->id,
+            'sender_id' => $validated['sender_id'],
+            'title' => $validated['title'],
+            'body' => $validated['body'],
+        ]);
 
-        return response()->json(['notification' => $notification], 201);
+        return response()->json([
+            'message' => 'Notification created successfully.',
+            'notification' => $notification
+        ], 201);
     }
 
     /**
@@ -68,21 +79,29 @@ class NotificationController extends Controller
     public function update(Request $request, $id)
     {
         $notification = Notification::find($id);
-
+    
         if (!$notification) {
             return response()->json(['message' => 'Notification not found'], 404);
         }
-
-        $request->validate([
-            'title' => 'required',
-            'body' => 'required',
-            // Add more validation rules as needed
+    
+        // 🚫 Prevent others from editing
+        // if ($notification->user_id !== $request->user()->id) {
+        //     return response()->json(['message' => 'Unauthorized'], 403);
+        // }
+    
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'body'  => 'required|string',
         ]);
-
-        $notification->update($request->all());
-
-        return response()->json(['notification' => $notification], 200);
+    
+        $notification->update($validated);
+    
+        return response()->json([
+            'message' => 'Notification updated successfully.',
+            'notification' => $notification,
+        ]);
     }
+
 
     /**
      * Remove the specified resource from storage.
