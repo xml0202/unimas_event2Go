@@ -158,7 +158,7 @@ class EventController extends Controller
         // Update the status based on approval or rejection
         if ($validatedData['approved']) {
             $event->status = 1; // Approved
-            $this->sendNotificationUsingFCMHttpV1(['user'], "New Event", $event->title, $event->id);
+            $this->sendNotificationUsingFCMHttpV1(['User'], "New Event", $event->title, $event->id);
             
             foreach ($users as $user) {
                 Notification::create([
@@ -305,7 +305,7 @@ class EventController extends Controller
     
         // ðŸ”¹ Send notifications
         if ($validatedData['status'] == 1) {
-            $this->sendNotificationUsingFCMHttpV1(['user'], "New Event", $validatedData['title'], $event->id);
+            $this->sendNotificationUsingFCMHttpV1(['User'], "New Event", $validatedData['title'], $event->id);
     
             $users = User::role('User')->whereNotNull('fcm_token')->get();
             foreach ($users as $user) {
@@ -319,7 +319,7 @@ class EventController extends Controller
                 ]);
             }
         } else {
-            $this->sendNotificationUsingFCMHttpV1(['admin'], "New Event Approval", $validatedData['title'], $event->id, $adminId);
+            $this->sendNotificationUsingFCMHttpV1(['Admin'], "New Event Approval", $validatedData['title'], $event->id, $adminId);
         }
     
         return response()->json([
@@ -2320,11 +2320,11 @@ class EventController extends Controller
     //     return response()->json(['message' => 'You have successfully joined the event!'], 201);
     // }
     
-    public function sendNotificationUsingFCMHttpV1(array $roles, $title, $body, $eventId, $adminId = null)
+    public function sendNotificationUsingFCMHttpV1(array $roles, string $title, string $body, int $eventId, $adminId = null)
     {
-        $projectId = 'event2go-1329c'; 
+        $projectId = 'event2go-1329c';
     
-        // Log the input parameters for debugging
+        // Log input
         \Log::info('Sending Notification', [
             'roles' => $roles,
             'title' => $title,
@@ -2333,71 +2333,120 @@ class EventController extends Controller
             'admin_id' => $adminId,
         ]);
     
-        $query = User::role($roles) 
-            ->whereNotNull('fcm_token'); 
+        try {
+            // --- STEP 1: Build base query ---
+            $query = User::query();
     
-        if ($adminId) {
-            $query = User::role($roles) 
-            ->join('events', 'events.admin_id', '=', 'users.id')
-            ->whereNotNull('users.fcm_token')
-            ->where('events.id', $eventId)
-            ->where('events.admin_id', $adminId);
-        }
-        
+            // If roles are provided, filter by role (Spatie\Permission)
+            if (!empty($roles)) {
+                $query->whereHas('roles', function ($q) use ($roles) {
+                    $q->whereIn('name', $roles)
+                      ->whereIn('guard_name', ['web', 'api']);
+                });
+
+            }
     
-        // Retrieve FCM tokens
-        $tokens = $query->pluck('fcm_token')->toArray();
+            // Always require FCM token
+            $query->whereNotNull('fcm_token');
     
-        // Log retrieved tokens
-        \Log::info('Filtered FCM Tokens:', ['tokens' => $tokens]);
+            // If admin-specific notification
+            if (!empty($adminId)) {
+                $query->join('events', 'events.admin_id', '=', 'users.id')
+                    ->where('events.id', $eventId)
+                    ->where('events.admin_id', $adminId)
+                    ->select('users.*'); // Ensure users columns are selected
+            }
     
-        // If no tokens found, return an error
-        if (empty($tokens)) {
-            return response()->json([
-                'message' => "No FCM tokens found for event ID: $eventId and roles: " . implode(', ', $roles),
-            ], 404);
-        }
+            // --- STEP 2: Get tokens ---
+            $tokens = $query->pluck('fcm_token')->filter()->unique()->values()->toArray();
     
-        // Prepare notification message
-        $message = [
-            'message' => [
-                'notification' => [
-                    'title' => $title, // Custom title
-                    'body' => $body,   // Custom body
-                ],
-                'android' => [
-                    'priority' => 'high',
-                ],
-                'apns' => [
-                    'headers' => [
-                        'apns-priority' => '10',
+            \Log::info('Filtered FCM Tokens', ['count' => count($tokens), 'tokens' => $tokens]);
+    
+            if (empty($tokens)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "No FCM tokens found for roles: " . implode(', ', $roles),
+                ], 404);
+            }
+    
+            // --- STEP 3: Fetch Access Token ---
+            $accessToken = $this->fetchAccessToken();
+    
+            if (!$accessToken) {
+                \Log::error('Failed to fetch FCM Access Token.');
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to get FCM access token.',
+                ], 500);
+            }
+    
+            // --- STEP 4: Prepare Notification Payload ---
+            $template = [
+                'message' => [
+                    'notification' => [
+                        'title' => $title,
+                        'body' => $body,
+                    ],
+                    'android' => [
+                        'priority' => 'high',
+                    ],
+                    'apns' => [
+                        'headers' => [
+                            'apns-priority' => '10',
+                        ],
+                    ],
+                    'data' => [
+                        'event_id' => (string) $eventId,
                     ],
                 ],
-            ],
-        ];
+            ];
     
-        // Fetch Access Token
-        $accessToken = $this->fetchAccessToken();
+            // --- STEP 5: Send Notification to Each Token ---
+            $failed = 0;
     
-        // Send Notifications
-        foreach ($tokens as $token) {
-            $message['message']['token'] = $token;
+            foreach ($tokens as $token) {
+                $message = $template;
+                $message['message']['token'] = $token;
     
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-            ])->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", $message);
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Content-Type'  => 'application/json',
+                ])->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", $message);
     
-            // Log response details
-            if (!$response->successful()) {
-                \Log::error("Failed to send FCM notification to token: $token. Error: " . $response->body());
-            } else {
-                \Log::info("Successfully sent FCM notification to token: $token. Response: " . $response->body());
+                if ($response->failed()) {
+                    $failed++;
+                    \Log::error("❌ FCM failed for token: $token", [
+                        'response' => $response->body(),
+                        'status' => $response->status(),
+                    ]);
+                } else {
+                    \Log::info("✅ FCM success for token: $token", [
+                        'response' => $response->body(),
+                    ]);
+                }
             }
-        }
     
-        // Final response
-        return response()->json(['message' => 'Notifications sent successfully.']);
+            // --- STEP 6: Summary Response ---
+            return response()->json([
+                'success' => true,
+                'message' => 'Notifications sent successfully.',
+                'sent' => count($tokens) - $failed,
+                'failed' => $failed,
+            ]);
+    
+        } catch (\Throwable $e) {
+            \Log::error('Error sending FCM notifications', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+    
+            return response()->json([
+                'success' => false,
+                'message' => 'Error sending notifications: ' . $e->getMessage(),
+            ], 500);
+        }
     }
+
 
 
 
