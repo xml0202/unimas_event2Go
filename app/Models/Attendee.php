@@ -10,9 +10,11 @@ class Attendee extends Pivot
     use HasFactory;
 
     protected $table = "attendees";
+    protected $primaryKey = 'id';
+    public $incrementing = true;   
+    public $timestamps = true;
 
     protected $fillable = [
-        'id', 
         'user_id', 
         'event_id', 
         'required_transport', 
@@ -50,4 +52,3 @@ class Attendee extends Pivot
         return $this->hasMany(AttendeeEventDay::class, 'attendee_id');
     }
 }
-
