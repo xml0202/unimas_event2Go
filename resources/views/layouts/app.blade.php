@@ -86,7 +86,7 @@
                 
                     <div class="flex sm:items-center sm:ml-6">
                         @if(Auth::user()->hasRole(['Super Admin','Admin', 'Agency']))
-                    <a href="https://event.kuchingitsolution.net/admin" class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">Dashboard</a>
+                    <a href="https://event2go.unimas.my/admin" class="hover:bg-blue-600 hover:text-white rounded py-2 px-4 mx-2">Dashboard</a>
                 @endif
                         <x-dropdown align="right" width="48">
                             <x-slot name="trigger">
