@@ -39,7 +39,7 @@ class AuthenticatedSessionController extends Controller
         $params = [
             'client_id' => env('OAUTH_CLIENT_ID', 'event2go-web'),
             'response_type' => 'code',
-            'redirect_uri' => env('OAUTH_REDIRECT_URI', 'https://event2go.unimas.my/'),
+            'redirect_uri' => env('OAUTH_REDIRECT_URI', 'https://event.kuchingitsolution.net/'),
             'scope' => 'openid profile email',
             'state' => $state
         ];
@@ -100,7 +100,7 @@ class AuthenticatedSessionController extends Controller
                 'client_id' => env('API_CLIENT_ID', 'event2go-web'),
                 'client_secret' => env('API_CLIENT_SECRET'),
                 'code' => $request->code,
-                'redirect_uri' => env('OAUTH_REDIRECT_URI', 'https://event2go.unimas.my/'),
+                'redirect_uri' => env('OAUTH_REDIRECT_URI', 'https://event.kuchingitsolution.net/'),
                 'scope' => 'openid profile email phone address offline_access microprofile-jwt web-origins acr roles extra',
             ];
     
@@ -245,7 +245,7 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         $idToken = session('id_token');
-        $redirectUri = env('OAUTH_REDIRECT_URI', 'https://event2go.unimas.my/');
+        $redirectUri = env('OAUTH_REDIRECT_URI', 'https://event.kuchingitsolution.net/');
     
         // Local Laravel logout
         Auth::guard('web')->logout();
