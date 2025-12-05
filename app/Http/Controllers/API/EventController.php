@@ -1056,7 +1056,6 @@ class EventController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
     
-        
         $validatedData = $request->validate([
             'event_id' => 'required|exists:events,id',
             'event_date' => 'required|date',
@@ -1065,7 +1064,7 @@ class EventController extends Controller
         $event = Event::findOrFail($validatedData['event_id']);
         $eventDate = Carbon::parse($validatedData['event_date']);
     
-        
+        // Validate date range
         if (
             $eventDate->lt(Carbon::parse($event->start_datetime)->startOfDay()) ||
             $eventDate->gt(Carbon::parse($event->end_datetime)->endOfDay())
@@ -1073,6 +1072,7 @@ class EventController extends Controller
             return response()->json(['message' => 'Invalid event date selected'], 400);
         }
     
+        // Cannot unjoin today or past
         if ($eventDate->isToday() || $eventDate->isPast()) {
             return response()->json(['message' => 'Cannot unjoin from ongoing or past event date'], 400);
         }
@@ -1095,15 +1095,24 @@ class EventController extends Controller
         }
     
         try {
+            // Delete the selected event day
             $eventDay->delete();
+    
+            // ✔ If no event days left → delete attendee record too
+            $remainingDays = AttendeeEventDay::where('attendee_id', $attendee->id)->count();
+            if ($remainingDays === 0) {
+                $attendee->delete();
+            }
+    
             return response()->json(['message' => 'Successfully unjoined from the event date'], 200);
+    
         } catch (\Exception $e) {
             \Log::error('Failed to unjoin event day: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to unjoin event day'], 500);
         }
     }
 
-    
+
     public function sendInvitation(Request $request)
     {
         $messages = [
