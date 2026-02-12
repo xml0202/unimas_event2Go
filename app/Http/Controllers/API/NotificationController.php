@@ -84,7 +84,7 @@ class NotificationController extends Controller
             return response()->json(['message' => 'Notification not found'], 404);
         }
     
-        // 🚫 Prevent others from editing
+        // ðŸš« Prevent others from editing
         // if ($notification->user_id !== $request->user()->id) {
         //     return response()->json(['message' => 'Unauthorized'], 403);
         // }
@@ -121,4 +121,37 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'Notification deleted successfully'], 200);
     }
+    
+    public function markAsRead(Request $request, $id)
+    {
+        $notification = Notification::where('id', $id)
+            // ->where('user_id', $request->user()->id)
+            ->first();
+    
+        if (!$notification) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Notification not found.'
+            ], 404);
+        }
+    
+        // ✅ Already read — do not update again
+        if ($notification->read_at !== null) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification already marked as read.'
+            ]);
+        }
+    
+        // ✅ Only update if still unread
+        $notification->update([
+            'read_at' => now()
+        ]);
+    
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read.'
+        ]);
+    }
+
 }
