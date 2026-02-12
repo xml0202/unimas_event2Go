@@ -113,6 +113,8 @@ Route::middleware('auth:api')->group(function () {
 
     Route::apiResource('faqs', FaqController::class);
     Route::apiResource('notifications', NotificationController::class);
+    
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
     Route::apiResource('user_infos', UserInfoController::class);
     Route::get('users/points', [EventController::class, 'getAllUsersPoints']);
