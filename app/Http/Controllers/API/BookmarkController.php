@@ -124,18 +124,33 @@ class BookmarkController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request, $event_id)
     {
-        $bookmark = Bookmark::find($id);
-
-        if (!$bookmark) {
-            return response()->json(['message' => 'Bookmark not found'], Response::HTTP_NOT_FOUND);
+        $user = $request->user();
+    
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated'
+            ], 401);
         }
-
+    
+        $bookmark = Bookmark::where('event_id', $event_id)
+            ->where('user_id', $user->id)
+            ->first();
+    
+        if (!$bookmark) {
+            return response()->json([
+                'message' => 'Bookmark not found'
+            ], 404);
+        }
+    
         $bookmark->delete();
-
-        return response()->json(['message' => 'Bookmark deleted successfully'], Response::HTTP_NO_CONTENT);
+    
+        return response()->json([
+            'message' => 'Bookmark deleted successfully'
+        ], 200);
     }
+
     
     public function addBookmark(Request $request)
     {
