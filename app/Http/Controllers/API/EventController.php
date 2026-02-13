@@ -1454,80 +1454,153 @@ class EventController extends Controller
     
     public function attendanceEvent(Request $request)
     {
-        $eventId = $request->input('event_id');
-        $tag = $request->input('tag');
-        $qrEventId = $request->input('qr_event');
+        $eventId = null;
+        $userId  = null;
     
-        // Prefer authenticated user over input
-        $userId = $request->user()->id ?? $request->input('user_id');
+        $qrEvent = $request->input('qr_event');
     
-        if (!$userId || !$eventId) {
-            return response()->json(['status' => "400", 'msg' => 'Missing required parameters']);
+        if (!$qrEvent) {
+            return response()->json([
+                'status' => "400",
+                'msg' => 'QR event missing'
+            ]);
         }
     
-        // Validate event existence first
+        /**
+         * -------------------------------------------------
+         * 1️⃣ Detect QR Type
+         * -------------------------------------------------
+         */
+    
+        // ✅ CASE A: User QR (numeric qr_event)
+        if (is_numeric($qrEvent)) {
+    
+            $userId  = $request->input('user_id');
+            $eventId = $qrEvent;
+    
+            if (!$userId || !$eventId) {
+                return response()->json([
+                    'status' => "400",
+                    'msg' => 'Invalid user QR format'
+                ]);
+            }
+        }
+    
+        // ✅ CASE B: Event QR (string like 121_1761494039)
+        else {
+    
+            $eventId = $request->input('event_id');
+            $userId  = $request->user()->id ?? $request->input('user_id');
+    
+            if (!$eventId || !$userId) {
+                return response()->json([
+                    'status' => "400",
+                    'msg' => 'Missing required parameters'
+                ]);
+            }
+        }
+    
+        /**
+         * -------------------------------------------------
+         * 2️⃣ Validate Event
+         * -------------------------------------------------
+         */
+    
         $event = Event::find($eventId);
+    
         if (!$event) {
-            return response()->json(['status' => "404", 'msg' => 'Event not found']);
+            return response()->json([
+                'status' => "404",
+                'msg' => 'Event not found'
+            ]);
         }
     
-        // ✅ Validate the QR code matches current event_qr in DB
-        if ($tag !== 'manual' && $qrEventId !== $event->event_qr) {
-            return response()->json(['status' => "409", 'msg' => 'Invalid or expired QR code']);
+        /**
+         * -------------------------------------------------
+         * 3️⃣ Validate Event QR (only for Event QR mode)
+         * -------------------------------------------------
+         */
+        if (!is_numeric($qrEvent)) {
+            if ($qrEvent !== $event->event_qr) {
+                return response()->json([
+                    'status' => "409",
+                    'msg' => 'Invalid or expired QR code'
+                ]);
+            }
         }
     
-        // Validate time window
+        /**
+         * -------------------------------------------------
+         * 4️⃣ Validate Time Window
+         * -------------------------------------------------
+         */
         if (!$this->is_time_valid($event->start_datetime, $event->end_datetime)) {
-            return response()->json(['status' => "409", 'msg' => 'Attendance is out of the available period']);
+            return response()->json([
+                'status' => "409",
+                'msg' => 'Attendance is out of the available period'
+            ]);
         }
     
-        // Validate attendee record
+        /**
+         * -------------------------------------------------
+         * 5️⃣ Validate Attendee
+         * -------------------------------------------------
+         */
         $attendee = Attendee::where('event_id', $eventId)
             ->where('user_id', $userId)
             ->first();
     
         if (!$attendee) {
-            return response()->json(['status' => "409", 'msg' => 'Record not found']);
+            return response()->json([
+                'status' => "409",
+                'msg' => 'User is not registered for this event'
+            ]);
         }
     
-        // Check duplicate attendance
+        /**
+         * -------------------------------------------------
+         * 6️⃣ Prevent Duplicate
+         * -------------------------------------------------
+         */
         if ($attendee->attended) {
-            return response()->json(['success' => false, 'msg' => 'Attendance has already been recorded']);
+            return response()->json([
+                'status' => "409",
+                'msg' => 'Attendance has already been recorded'
+            ]);
         }
     
-        // Record attendance
+        /**
+         * -------------------------------------------------
+         * 7️⃣ Record Attendance
+         * -------------------------------------------------
+         */
         Attendance::create([
-            'event_id' => $eventId,
-            'user_id' => $userId,
+            'event_id'      => $eventId,
+            'user_id'       => $userId,
             'check_in_date' => now()->toDateString(),
         ]);
     
         $attendee->update(['attended' => true]);
     
-        $totalAttendees = Attendee::where('event_id', $eventId)->where('approved', 1)->count();
-        $attendedCount = Attendee::where('event_id', $eventId)->where('attended', 1)->count();
+        $totalAttendees = Attendee::where('event_id', $eventId)
+            ->where('approved', 1)
+            ->count();
     
-        // If manual mode, return pending attendees
-        if ($tag === 'manual') {
-            $pendingAttendees = Attendee::with('user')
-                ->where('event_id', $eventId)
-                ->where('attended', 0)
-                ->get();
-    
-            return response()->json(['attendees' => $pendingAttendees]);
-        }
+        $attendedCount = Attendee::where('event_id', $eventId)
+            ->where('attended', 1)
+            ->count();
     
         return response()->json([
             'status' => "200",
+            'msg' => 'Attendance recorded successfully',
             'data' => [
-                'user' => $request->user() ?? User::find($userId),
-                'attendee' => $attendee,
+                'user' => User::find($userId),
+                'event' => $event,
                 'totalAttendees' => $totalAttendees,
                 'attendedCount' => $attendedCount
             ]
         ]);
     }
-
 
 
     private function is_time_valid($startTime, $endTime)
