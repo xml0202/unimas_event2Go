@@ -1095,6 +1095,7 @@ class EventController extends Controller
         }
     
         try {
+            DB::beginTransaction();
             // Delete the selected event day
             $eventDay->delete();
     
@@ -1103,6 +1104,56 @@ class EventController extends Controller
             if ($remainingDays === 0) {
                 $attendee->delete();
             }
+            
+            $team = TeamAttendee::where('event_id', $event->id)
+            ->where('event_date', $eventDate->toDateString())
+            ->first();
+            
+            if ($team) {
+
+                // ❌ DO NOT remove if user is team leader
+                if ($team->team_leader == $user->id) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => 'Team leader cannot unjoin the event date'
+                    ], 400);
+                }
+        
+                // Remove from member columns
+                $updated = false;
+        
+                if ($team->team_member_1 == $user->id) {
+                    $team->team_member_1 = null;
+                    $updated = true;
+                }
+        
+                if ($team->team_member_2 == $user->id) {
+                    $team->team_member_2 = null;
+                    $updated = true;
+                }
+        
+                if ($team->team_member_3 == $user->id) {
+                    $team->team_member_3 = null;
+                    $updated = true;
+                }
+                
+                if ($team->team_member_4 == $user->id) {
+                    $team->team_member_4 = null;
+                    $updated = true;
+                }
+                
+                if ($team->team_member_5 == $user->id) {
+                    $team->team_member_5 = null;
+                    $updated = true;
+                }
+        
+                if ($updated) {
+                    $team->save();
+                }
+            }
+        
+            DB::commit();
+
     
             return response()->json(['message' => 'Successfully unjoined from the event date'], 200);
     
