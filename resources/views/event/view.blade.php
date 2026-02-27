@@ -83,6 +83,11 @@
                         @auth
                             @if(auth()->user()->hasRole('User'))
                                 @php
+                                  
+                                    $startDate = \Carbon\Carbon::parse($event->start_datetime)->startOfDay();
+                                    $endDate = \Carbon\Carbon::parse($event->end_datetime)->startOfDay();
+                                
+                                    $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
                                     $registerStartDateTime = \Carbon\Carbon::parse($event->start_datetime);
                                     $registerEndDateTime = \Carbon\Carbon::parse($event->end_datetime);
                                     $currentDateTime = now(); // Get the current date and time
@@ -165,6 +170,17 @@
                 <input type="hidden" name="attended" value=0>
                 <input type="hidden" name="approved" value=0>
                 <input type="hidden" name="status" value=1>
+                <div class="form-group flex flex-col md:flex-row mb-3">
+                    <label class="font-semibold mb-1">Select Event Date</label>
+                    <select name="selected_date" id="selected_date" required class="border p-2 rounded">
+                        <option value="">-- Select a date --</option>
+                        @foreach ($period as $date)
+                            <option value="{{ $date->format('Y-m-d') }}">
+                                {{ $date->format('d M Y') }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <select name="gender" id="gender" class="form-group flex flex-col md:flex-row" required>
                     <option value="" >Select Gender</option>
                     <option value="1" {{ !is_null($attendee) && $attendee->gender == '1' ? 'selected' : '' }}>Male</option>
@@ -174,6 +190,10 @@
                 <!-- Other form fields -->
                 <div class="form-group flex flex-col md:flex-row">
                     <input type="tel" name="mobile_no" id="contact_no" placeholder="Contact No" value="{{ $attendee->mobile_no ?? '' }}" required>
+                </div>
+                
+                <div class="form-group flex flex-col md:flex-row">
+                    <input type="email" name="email" id="contact_no" placeholder="Email" value="{{ $attendee->email ?? '' }}" required>
                 </div>
             
                 <div class="form-group flex flex-col md:flex-row">
@@ -205,6 +225,7 @@
                 <div class="flex justify-between pt-4">
                     <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Confirm
+                        <span id="loadingSpinner" class="hidden ml-2">⏳ Loading...</span>
                     </button>
                     <button id="cancelBtn" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
                         Cancel
@@ -225,6 +246,7 @@
                     <input type="hidden" name="event_id" value="{{ $event->id }}">
                     <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
                         Confirm Unjoin
+                        <span id="unjoinLoadingSpinner" class="hidden ml-2">⏳ Loading...</span>
                     </button>
                 </form>
                 <button id="cancelBtn2" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
@@ -272,6 +294,9 @@
         // Handle form submission
         $('#join-event-form').submit(function (event) {
             event.preventDefault(); // Prevent the form from submitting normally
+            
+            $('#joinSubmitBtn').prop('disabled', true);
+            $('#loadingSpinner').removeClass('hidden');
 
             // Serialize form data
             var formData = $(this).serialize();
@@ -305,6 +330,11 @@
                     } else {
                         errorContainer.append('<p>Something went wrong. Please try again later.</p>');
                     }
+                },
+                complete: function () {
+                    // Hide loading & enable button after request finishes
+                    $('#joinSubmitBtn').prop('disabled', false);
+                    $('#loadingSpinner').addClass('hidden');
                 }
             });
         });
@@ -314,6 +344,43 @@
             // Close the modal
             $('#modal').addClass('hidden');
         });
+        
+        $('#unjoinForm').submit(function(event) {
+        event.preventDefault(); // prevent default form submit
+
+        // Disable the button and show loading spinner
+        $('#unjoinForm button[type="submit"]').prop('disabled', true);
+        $('#unjoinLoadingSpinner').removeClass('hidden');
+
+        var formData = $(this).serialize();
+
+        $.ajax({
+            type: 'POST',
+            url: $(this).attr('action'),
+            data: formData,
+            headers: {
+                'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
+                'Accept': 'application/json'
+            },
+            success: function(response) {
+                // Reload page after unjoin
+                window.location.reload();
+            },
+            error: function(response) {
+                alert('Something went wrong. Please try again.');
+            },
+            complete: function() {
+                // Re-enable button and hide spinner in case of error
+                $('#unjoinForm button[type="submit"]').prop('disabled', false);
+                $('#unjoinLoadingSpinner').addClass('hidden');
+            }
+        });
+    });
+
+    // Cancel button closes modal
+    $('#cancelBtn2').click(function () {
+        $('#modal2').addClass('hidden');
+    });
     });
 </script>
     
