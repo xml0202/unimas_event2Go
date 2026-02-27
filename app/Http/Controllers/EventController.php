@@ -9,6 +9,7 @@ use App\Models\UserInfo;
 use App\Models\EventView;
 use App\Models\FeedbackAns;
 use App\Models\Feedback2Ans;
+use App\Models\AttendeeEventDay;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +82,12 @@ class EventController extends Controller
                 'events.report_created_at',
                 'events.report_updated_at',
                 'events.registration_start_datetime',
-                'events.registration_close_datetime'
+                'events.registration_close_datetime',
+                'events.latitude',
+                'events.longitude',
+                'events.pic_name',
+                'events.pic_email',
+                'events.pic_contact'
             ])
             ->limit(5)
             ->get();
@@ -111,9 +117,43 @@ class EventController extends Controller
                 ->groupBy([
                     'events.id',
                     'events.title',
+                    'events.admin_id',
+                    'events.attachment',
+                    'events.introduction',
+                    'events.organized_by',
+                    'events.in_collaboration',
+                    'events.program_objective',
+                    'events.program_impact',
+                    'events.invitation',
+                    'events.start_datetime',
+                    'events.end_datetime',
+                    'events.category',
+                    'events.location',
+                    'events.max_user',
+                    'events.price',
+                    'events.earn_points',
+                    'events.comment_enabled',
+                    'events.event_qr',
+                    'events.approved',
+                    'events.approval',
+                    'events.status',
+                    'events.Avgrating',
                     'events.user_id',
                     'events.created_at',
                     'events.updated_at',
+                    'events.url',
+                    'events.pdf_files',
+                    'events.points_awarded_at',
+                    'events.report',
+                    'events.report_created_at',
+                    'events.report_updated_at',
+                    'events.registration_start_datetime',
+                    'events.registration_close_datetime',
+                    'events.latitude',
+                    'events.longitude',
+                    'events.pic_name',
+                    'events.pic_email',
+                    'events.pic_contact'
                 ])
                 ->limit(3)
                 ->get();
@@ -254,43 +294,47 @@ class EventController extends Controller
     public function joinEvent(Request $request)
     {
         $price = $request->query('price');
-        
+    
         $validatedData = $request->validate([
             'event_id' => 'required|string|max:255',
+            'selected_date' => 'required|date',
         ]);
-        
+    
         $user = auth()->user();
-        
-        $existingAttendee = UserInfo::where('mobile_no', $request->input('mobile_no'))->whereNot('user_id', $user->id)->first();
+    
+        $existingAttendee = UserInfo::where('mobile_no', $request->input('mobile_no'))
+            ->whereNot('user_id', $user->id)
+            ->first();
     
         if ($existingAttendee) {
             return response()->json(['message' => 'Mobile number is already in use.'], 422);
         }
-        
-        
-        
+    
+        // Deduct points
         $user->points()->create([
             'action' => 'event_joined',
             'points' => -$price,
         ]);
-        
+    
         $user->updateTotalPoints();
-        
-        if (!$user->userInfo) {
-        $userInfo = new UserInfo([
-            'user_id' => $user->id,
-            'mobile_no' => $request->input('mobile_no'),
-            'addr_line_1' => $request->input('addr_line_1'),
-            'addr_line_2' => $request->input('addr_line_2'),
-            'postcode' => $request->input('postcode'),
-            'city' => $request->input('city'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
-            'gender' => $request->input('gender'),
-        ]);
-        $userInfo->save();
-    }
-
+    
+        // Create user info if missing
+        // if (!$user->userInfo) {
+        //     $userInfo = new UserInfo([
+        //         'user_id' => $user->id,
+        //         'mobile_no' => $request->input('mobile_no'),
+        //         'addr_line_1' => $request->input('addr_line_1'),
+        //         'addr_line_2' => $request->input('addr_line_2'),
+        //         'postcode' => $request->input('postcode'),
+        //         'city' => $request->input('city'),
+        //         'state' => $request->input('state'),
+        //         'country' => $request->input('country'),
+        //         'gender' => $request->input('gender'),
+        //     ]);
+        //     $userInfo->save();
+        // }
+    
+        // Create attendee
         $attendee = new Attendee();
         $attendee->user_id = $user->id;
         $attendee->event_id = $validatedData['event_id'];
@@ -299,6 +343,7 @@ class EventController extends Controller
         $attendee->attended = $request->input('attended');
         $attendee->approved = $request->input('approved');
         $attendee->mobile_no = $request->input('mobile_no');
+        $attendee->email = $request->input('email');
         $attendee->status = $request->input('status');
         $attendee->gender = $request->input('gender');
         $attendee->addr_line_1 = $request->input('addr_line_1');
@@ -307,12 +352,24 @@ class EventController extends Controller
         $attendee->city = $request->input('city');
         $attendee->state = $request->input('state');
         $attendee->country = $request->input('country');
-        $attendee->state = $request->input('state');
-        
+    
         $attendee->save();
-
+        
+        try {
+            AttendeeEventDay::create([
+                'attendee_id' => $attendee->id,
+                'event_date' => \Carbon\Carbon::parse($validatedData['selected_date'])->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create AttendeeEventDay: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to register for event day'], 500);
+        }
+    
         return redirect()->back()->with('success', 'You have successfully joined the event!');
     }
+
     
     public function unjoinEvent(Request $request)
     {
@@ -321,23 +378,41 @@ class EventController extends Controller
         ]);
     
         $user = auth()->user();
-        
-        $price = $request->query('price');
-        
+    
+        $price = $request->query('price'); // event points to deduct
+    
         $user->points()->create([
-            'action' => 'event_joined',
-            'points' => $price,
+            'action' => 'event_unjoined',
+            'points' => -abs($price), // ensure it's NEGATIVE
         ]);
+            
+        $attendee = Attendee::where('user_id', $user->id)
+            ->where('event_id', $validatedData['event_id'])
+            ->latest()
+            ->first();
     
-        // Delete the user's attendance record for the specified event
-        $user->attendee()->where('event_id', $validatedData['event_id'])->delete();
+        if (!$attendee) {
+            return response()->json(['message' => 'User is not registered for this event'], 400);
+        }
+        
+        $user->attendee()
+            ->where('event_id', $validatedData['event_id'])
+            ->delete();
     
-        // Update the user's total points
+        $eventDay = AttendeeEventDay::where('attendee_id', $attendee->id)->first();
+
+        if ($eventDay) {
+            AttendeeEventDay::where('attendee_id', $attendee->id)
+                ->where('event_date', $eventDay->event_date)
+                ->delete();
+        }
+    
+        // Update the user's point total
         $user->updateTotalPoints();
     
         return redirect()->back()->with('success', 'You have successfully unjoined the event!');
     }
-    
+
     public function generateQRCode($eventId)
     {
         $event = Event::find($eventId);
