@@ -1,3 +1,16 @@
+@php
+    $period = collect();
+    $attendee = null;
+    $userJoined = false;
+    $userCanJoin = false;
+
+    if (auth()->check() && auth()->user()->hasRole('User')) {
+        $startDate = \Carbon\Carbon::parse($event->start_datetime)->startOfDay();
+        $endDate = \Carbon\Carbon::parse($event->end_datetime)->startOfDay();
+        $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+    }
+@endphp
+
 <x-app-layout :meta-title="$event->meta_title ?: $event->title" :meta-description="$event->introduction">
     <div class="flex">
         <!-- Post Section -->
@@ -5,9 +18,7 @@
 
             <article class="flex flex-col shadow my-4">
                 <!-- Article Image -->
-                <!--<a href="#" class="hover:opacity-75">-->
-                    <img src="{{$event->getThumbnail()}}" class="w-full">
-                <!--</a>-->
+                <img src="{{$event->getThumbnail()}}" class="w-full">
                 <div class="bg-white flex flex-col justify-start p-6">
                     <!-- Category -->
                     <div class="text-gray-600 mb-2">
@@ -33,15 +44,16 @@
                             <span class="font-semibold">URL:</span>
                             <a href="{{$event->url}}" class="text-blue-500 hover:underline" target="_blank">{{$event->url}}</a>
                         @else
-                            <i class="fas fa-map-marker-alt mr-1"></i> 
+                            <i class="fas fa-map-marker-alt mr-1"></i>
                             <span class="font-semibold">Location:</span> {{$event->location}}
                         @endif
                     </p>
-                    <!-- Event and Register Date and Time -->
+                    <!-- Event Date and Time -->
                     <p class="text-sm mb-2">
                         <span class="font-semibold">
                             <i class="far fa-calendar-alt mr-1"></i>
-                            Event Date and Time: </span>
+                            Event Date and Time:
+                        </span>
                         {{$event->start_datetime}} | {{ $event->end_datetime }}
                     </p>
                     <!-- Max User -->
@@ -52,14 +64,13 @@
                         </span>
                         {{$event->max_user}}
                     </p>
-                    <!-- Description and Extra Info -->
+                    <!-- Description -->
                     <div class="mb-4">
                         <p class="text-sm text-gray-700 mb-2">
                             {!! $event->introduction !!}
                         </p>
-                        
                     </div>
-                    <!-- Upvote and Downvote Component -->
+                    <!-- Upvote/Downvote and Bookmark -->
                     <div class="flex">
                         <div class="mr-4">
                             <livewire:upvote-downvote :event="$event"/>
@@ -68,11 +79,8 @@
                             <livewire:bookmark :event="$event"/>
                         </div>
                     </div>
-                    <div class="flex justify-end">
-                        
-                    </div>
                     <!-- Join Event Button -->
-                    <div class="flex justify-end">
+                    <div class="flex justify-end mt-4">
                         <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(Request::url()) }}&quote={{ urlencode($event->title) }}"
                            target="_blank"
                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center mr-2">
@@ -83,34 +91,28 @@
                         @auth
                             @if(auth()->user()->hasRole('User'))
                                 @php
-                                  
-                                    $startDate = \Carbon\Carbon::parse($event->start_datetime)->startOfDay();
-                                    $endDate = \Carbon\Carbon::parse($event->end_datetime)->startOfDay();
-                                
-                                    $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
                                     $registerStartDateTime = \Carbon\Carbon::parse($event->start_datetime);
                                     $registerEndDateTime = \Carbon\Carbon::parse($event->end_datetime);
-                                    $currentDateTime = now(); // Get the current date and time
+                                    $currentDateTime = now();
                                     $userJoined = $event->attendees()->where('user_id', auth()->user()->id)->exists();
-                                    $userPoints = auth()->user()->total_points; // Assuming you have a method to get the user's total points
-                                    $eventPrice = $event->price; // Assuming you have a method to get the event's price
+                                    $userPoints = auth()->user()->total_points;
+                                    $eventPrice = $event->price;
                                     $userCanJoin = $userPoints >= $eventPrice;
                                 @endphp
-                                
-                                    @if($userJoined)
-                                        <a id="showModalBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                            Joined
-                                        </a>
-                                    @elseif($userCanJoin)
-                                        <a id="joinBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                            Join Event
-                                        </a>
-                                    @else
-                                        <span class="bg-red-300 text-gray-600 font-bold py-2 px-4 rounded border border-red-500 cursor-not-allowed">
-                                            Not Enough Points
-                                        </span>
-                                    @endif
-                                
+
+                                @if($userJoined)
+                                    <a id="showModalBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
+                                        Joined
+                                    </a>
+                                @elseif($userCanJoin)
+                                    <a id="joinBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
+                                        Join Event
+                                    </a>
+                                @else
+                                    <span class="bg-red-300 text-gray-600 font-bold py-2 px-4 rounded border border-red-500 cursor-not-allowed">
+                                        Not Enough Points
+                                    </span>
+                                @endif
                             @endif
                         @endauth
                     </div>
@@ -134,9 +136,10 @@
                     @if($next)
                         <a href="{{route('view', $next)}}"
                            class="block w-full bg-white shadow hover:shadow-md text-right p-6">
-                            <p class="text-lg text-blue-800 font-bold flex items-center justify-end">Next
-                                <i
-                                    class="fas fa-arrow-right pl-1"></i></p>
+                            <p class="text-lg text-blue-800 font-bold flex items-center justify-end">
+                                Next
+                                <i class="fas fa-arrow-right pl-1"></i>
+                            </p>
                             <p class="pt-2">
                                 {{\Illuminate\Support\Str::words($next->title, 5)}}
                             </p>
@@ -144,6 +147,7 @@
                     @endif
                 </div>
             </div>
+
             @php
                 $comment_enabled = $event->comment_enabled;
             @endphp
@@ -151,237 +155,204 @@
                 <livewire:comments :event="$event"/>
             @endif
         </section>
+    </div>
 
-        
-    </div>
-    
-    <!-- Modal -->
-    <div id="modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-        <div class="bg-white p-8 rounded shadow-md">
-            
-            <h2 class="text-2xl font-bold mb-4">Join Event - {{ $event->title }}</h2>
-            <!-- Your form fields here -->
-            <form id="join-event-form" class="flex flex-col">
-                @csrf
-                <!-- Hidden input field for event_id -->
-                <input type="hidden" name="event_id" value="{{ $event->id }}">
-                <input type="hidden" name="required_transport" value=0>
-                <input type="hidden" name="qrcode" value='null'>
-                <input type="hidden" name="attended" value=0>
-                <input type="hidden" name="approved" value=0>
-                <input type="hidden" name="status" value=1>
-                <div class="form-group flex flex-col md:flex-row mb-3">
-                    <label class="font-semibold mb-1">Select Event Date</label>
-                    <select name="selected_date" id="selected_date" required class="border p-2 rounded">
-                        <option value="">-- Select a date --</option>
-                        @foreach ($period as $date)
-                            <option value="{{ $date->format('Y-m-d') }}">
-                                {{ $date->format('d M Y') }}
-                            </option>
-                        @endforeach
-                    </select>
+    @auth
+        @if(auth()->user()->hasRole('User'))
+            <!-- Join Modal -->
+            <div id="modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto">
+                <div class="bg-white p-8 rounded shadow-md w-full max-w-lg my-8 mx-auto">
+                    <h2 class="text-2xl font-bold mb-4">Join Event - {{ $event->title }}</h2>
+                    <form id="join-event-form" class="flex flex-col">
+                        @csrf
+                        <input type="hidden" name="event_id" value="{{ $event->id }}">
+                        <input type="hidden" name="required_transport" value="0">
+                        <input type="hidden" name="qrcode" value="null">
+                        <input type="hidden" name="attended" value="0">
+                        <input type="hidden" name="approved" value="0">
+                        <input type="hidden" name="status" value="1">
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <label class="font-semibold mb-1">Select Event Date</label>
+                            <select name="selected_date" id="selected_date" required class="border p-2 rounded">
+                                <option value="">-- Select a date --</option>
+                                @foreach ($period as $date)
+                                    <option value="{{ $date->format('Y-m-d') }}">
+                                        {{ $date->format('d M Y') }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <select name="gender" id="gender" class="form-group flex flex-col md:flex-row mb-3" required>
+                            <option value="">Select Gender</option>
+                            <option value="1" {{ !is_null($attendee) && $attendee->gender == '1' ? 'selected' : '' }}>Male</option>
+                            <option value="2" {{ !is_null($attendee) && $attendee->gender == '2' ? 'selected' : '' }}>Female</option>
+                        </select>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="tel" name="mobile_no" id="contact_no" placeholder="Contact No" value="{{ $attendee->mobile_no ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="email" name="email" placeholder="Email" value="{{ $attendee->email ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="text" name="addr_line_1" id="addr_line_1" placeholder="Address Line 1" value="{{ $attendee->addr_line_1 ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="text" name="addr_line_2" id="addr_line_2" placeholder="Address Line 2" value="{{ $attendee->addr_line_2 ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="number" name="postcode" id="postcode" placeholder="Postcode" value="{{ $attendee->postcode ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="text" name="city" id="city" placeholder="City" value="{{ $attendee->city ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="text" name="state" id="state" placeholder="State" value="{{ $attendee->state ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div class="form-group flex flex-col md:flex-row mb-3">
+                            <input type="text" name="country" id="country" placeholder="Country" value="{{ $attendee->country ?? '' }}" required class="border p-2 rounded">
+                        </div>
+                        <div id="error-container" class="text-red-500"></div>
+                        <div class="flex justify-between pt-4">
+                            <button id="joinSubmitBtn" type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                Confirm
+                                <span id="loadingSpinner" class="hidden ml-2">⏳ Loading...</span>
+                            </button>
+                            <button id="cancelBtn" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <select name="gender" id="gender" class="form-group flex flex-col md:flex-row" required>
-                    <option value="" >Select Gender</option>
-                    <option value="1" {{ !is_null($attendee) && $attendee->gender == '1' ? 'selected' : '' }}>Male</option>
-                    <option value="2" {{ !is_null($attendee) && $attendee->gender == '2' ? 'selected' : '' }}>Female</option>
-                </select>
-                
-                <!-- Other form fields -->
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="tel" name="mobile_no" id="contact_no" placeholder="Contact No" value="{{ $attendee->mobile_no ?? '' }}" required>
-                </div>
-                
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="email" name="email" id="contact_no" placeholder="Email" value="{{ $attendee->email ?? '' }}" required>
-                </div>
-            
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="text" name="addr_line_1" id="addr_line_1" placeholder="Address Line 1" value="{{ $attendee->addr_line_1 ?? '' }}" required>
-                </div>
-                
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="text" name="addr_line_2" id="addr_line_2" placeholder="Address Line 2" value="{{ $attendee->addr_line_2 ?? '' }}" required>
-                </div>
-            
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="number" name="postcode" id="postcode" placeholder="Postcode" value="{{ $attendee->postcode ?? '' }}" required>
-                </div>
-                
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="text" name="city" id="city" placeholder="City" value="{{ $attendee->city ?? '' }}" required>
-                </div>    
-            
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="text" name="state" id="state" placeholder="State" value="{{ $attendee->state ?? '' }}" required>
-                </div>
-                    
-                <div class="form-group flex flex-col md:flex-row">
-                    <input type="text" name="country" id="country" placeholder="Country" value="{{ $attendee->country ?? '' }}" required>
-                </div>
-                
-                <div id="error-container" class="text-red-500"></div>
-            
-                <div class="flex justify-between pt-4">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Confirm
-                        <span id="loadingSpinner" class="hidden ml-2">⏳ Loading...</span>
-                    </button>
-                    <button id="cancelBtn" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <div id="modal2" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-        <div class="bg-white p-8 rounded shadow-md">
-            <h2 class="text-2xl font-bold mb-4">Unjoin Event - {{ $event->title }}</h2>
-            <p>Are you sure you want to unjoin this event?</p>
-            <div class="flex justify-between pt-4">
-                <form id="unjoinForm" action="{{ route('unjoinEvent', ['price' => $event->price]) }}" method="POST">
-                    @csrf
-                    <!-- Hidden input field for event_id -->
-                    <input type="hidden" name="event_id" value="{{ $event->id }}">
-                    <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                        Confirm Unjoin
-                        <span id="unjoinLoadingSpinner" class="hidden ml-2">⏳ Loading...</span>
-                    </button>
-                </form>
-                <button id="cancelBtn2" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-                    Cancel
-                </button>
             </div>
-        </div>
-    </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const showModalBtn = document.getElementById('showModalBtn');
-            const cancelBtn = document.getElementById('cancelBtn2');
-            const modal = document.getElementById('modal2');
-    
-            showModalBtn.addEventListener('click', function() {
-                modal.classList.remove('hidden');
-            });
-    
-            cancelBtn.addEventListener('click', function() {
-                modal.classList.add('hidden');
-            });
-        });
-    </script>
 
-    <!-- JavaScript to handle modal visibility -->
-    <script>
-        const modal = document.getElementById('modal');
-        const joinBtn = document.getElementById('joinBtn');
-        const cancelBtn = document.getElementById('cancelBtn');
+            <!-- Unjoin Modal -->
+            <div id="modal2" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+                <div class="bg-white p-8 rounded shadow-md">
+                    <h2 class="text-2xl font-bold mb-4">Unjoin Event - {{ $event->title }}</h2>
+                    <p>Are you sure you want to unjoin this event?</p>
+                    <div class="flex justify-between pt-4">
+                        <form id="unjoinForm" action="{{ route('unjoinEvent', ['price' => $event->price]) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="event_id" value="{{ $event->id }}">
+                            <button type="submit" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                Confirm Unjoin
+                                <span id="unjoinLoadingSpinner" class="hidden ml-2">⏳ Loading...</span>
+                            </button>
+                        </form>
+                        <button id="cancelBtn2" type="button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-        joinBtn.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
-
-    </script>
-    
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script>
-    $(document).ready(function () {
-        // Handle form submission
-        $('#join-event-form').submit(function (event) {
-            event.preventDefault(); // Prevent the form from submitting normally
-            
-            $('#joinSubmitBtn').prop('disabled', true);
-            $('#loadingSpinner').removeClass('hidden');
-
-            // Serialize form data
-            var formData = $(this).serialize();
-
-            // Submit form data via AJAX
-            $.ajax({
-                type: 'POST',
-                url: '{{ route("joinEvent", ["price" => $event->price]) }}',
-                data: formData,
-                headers: {
-                    'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
-                    'Accept': 'application/json'
-                },
-                success: function (response) {
-                    // Handle success, e.g., close modal or show success message
-                    // For example, you can redirect the user to another page
-                     window.location.reload();
-                },
-                error: function (response) {
-                    // Handle errors, e.g., display error messages
-                    var errorContainer = $('#error-container');
-                    errorContainer.empty(); // Clear previous error messages
-                
-                    if (response.status === 422) {
-                        var errors = response.responseJSON.errors;
-                        if (errors && errors.mobile_no) {
-                            errorContainer.append('<p class="text-red-500">' + errors.mobile_no[0] + '</p>');
-                        } else {
-                            errorContainer.append('<p class="text-red-500">Mobile number is already in use.</p>');
-                        }
-                    } else {
-                        errorContainer.append('<p>Something went wrong. Please try again later.</p>');
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Unjoin modal open
+                    const showModalBtn = document.getElementById('showModalBtn');
+                    if (showModalBtn) {
+                        showModalBtn.addEventListener('click', function () {
+                            document.getElementById('modal2').classList.remove('hidden');
+                        });
                     }
-                },
-                complete: function () {
-                    // Hide loading & enable button after request finishes
-                    $('#joinSubmitBtn').prop('disabled', false);
-                    $('#loadingSpinner').addClass('hidden');
-                }
-            });
-        });
 
-        // Handle cancel button click
-        $('#cancelBtn').click(function () {
-            // Close the modal
-            $('#modal').addClass('hidden');
-        });
-        
-        $('#unjoinForm').submit(function(event) {
-        event.preventDefault(); // prevent default form submit
+                    // Join modal open
+                    const joinBtn = document.getElementById('joinBtn');
+                    if (joinBtn) {
+                        joinBtn.addEventListener('click', function () {
+                            document.getElementById('modal').classList.remove('hidden');
+                        });
+                    }
 
-        // Disable the button and show loading spinner
-        $('#unjoinForm button[type="submit"]').prop('disabled', true);
-        $('#unjoinLoadingSpinner').removeClass('hidden');
+                    // Cancel buttons
+                    const cancelBtn = document.getElementById('cancelBtn');
+                    if (cancelBtn) {
+                        cancelBtn.addEventListener('click', function () {
+                            document.getElementById('modal').classList.add('hidden');
+                        });
+                    }
 
-        var formData = $(this).serialize();
+                    const cancelBtn2 = document.getElementById('cancelBtn2');
+                    if (cancelBtn2) {
+                        cancelBtn2.addEventListener('click', function () {
+                            document.getElementById('modal2').classList.add('hidden');
+                        });
+                    }
+                });
 
-        $.ajax({
-            type: 'POST',
-            url: $(this).attr('action'),
-            data: formData,
-            headers: {
-                'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
-                'Accept': 'application/json'
-            },
-            success: function(response) {
-                // Reload page after unjoin
-                window.location.reload();
-            },
-            error: function(response) {
-                alert('Something went wrong. Please try again.');
-            },
-            complete: function() {
-                // Re-enable button and hide spinner in case of error
-                $('#unjoinForm button[type="submit"]').prop('disabled', false);
-                $('#unjoinLoadingSpinner').addClass('hidden');
-            }
-        });
-    });
+                $(document).ready(function () {
+                    // Join form AJAX
+                    $('#join-event-form').submit(function (event) {
+                        event.preventDefault();
+                        $('#joinSubmitBtn').prop('disabled', true);
+                        $('#loadingSpinner').removeClass('hidden');
 
-    // Cancel button closes modal
-    $('#cancelBtn2').click(function () {
-        $('#modal2').addClass('hidden');
-    });
-    });
-</script>
-    
+                        var formData = $(this).serialize();
+
+                        $.ajax({
+                            type: 'POST',
+                            url: '{{ route("joinEvent", ["price" => $event->price]) }}',
+                            data: formData,
+                            headers: {
+                                'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
+                                'Accept': 'application/json'
+                            },
+                            success: function (response) {
+                                window.location.reload();
+                            },
+                            error: function (response) {
+                                var errorContainer = $('#error-container');
+                                errorContainer.empty();
+                                if (response.status === 422) {
+                                    var errors = response.responseJSON.errors;
+                                    if (errors && errors.mobile_no) {
+                                        errorContainer.append('<p class="text-red-500">' + errors.mobile_no[0] + '</p>');
+                                    } else {
+                                        errorContainer.append('<p class="text-red-500">Mobile number is already in use.</p>');
+                                    }
+                                } else {
+                                    errorContainer.append('<p>Something went wrong. Please try again later.</p>');
+                                }
+                            },
+                            complete: function () {
+                                $('#joinSubmitBtn').prop('disabled', false);
+                                $('#loadingSpinner').addClass('hidden');
+                            }
+                        });
+                    });
+
+                    // Unjoin form AJAX
+                    $('#unjoinForm').submit(function (event) {
+                        event.preventDefault();
+                        $('#unjoinForm button[type="submit"]').prop('disabled', true);
+                        $('#unjoinLoadingSpinner').removeClass('hidden');
+
+                        var formData = $(this).serialize();
+
+                        $.ajax({
+                            type: 'POST',
+                            url: $(this).attr('action'),
+                            data: formData,
+                            headers: {
+                                'Authorization': 'Bearer 10|SHpp3nPLRuBJqQG7cFhV4vGU6a5nITkSqASwCk17f54cf611',
+                                'Accept': 'application/json'
+                            },
+                            success: function (response) {
+                                window.location.reload();
+                            },
+                            error: function (response) {
+                                alert('Something went wrong. Please try again.');
+                            },
+                            complete: function () {
+                                $('#unjoinForm button[type="submit"]').prop('disabled', false);
+                                $('#unjoinLoadingSpinner').addClass('hidden');
+                            }
+                        });
+                    });
+                });
+            </script>
+        @endif
+    @endauth
+
 </x-app-layout>
