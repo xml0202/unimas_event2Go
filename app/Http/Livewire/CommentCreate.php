@@ -33,7 +33,7 @@ class CommentCreate extends Component
     {
         $user = auth()->user();
         if (!$user) {
-            return $this->redirect('/login');
+            return $this->redirect('/');
         }
 
         if ($this->commentModel) {
